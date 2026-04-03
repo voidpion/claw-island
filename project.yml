@@ -1,0 +1,64 @@
+name: ClawIsland
+options:
+  bundleIdPrefix: com.zhangjin
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    ENABLE_HARDENED_RUNTIME: YES
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+
+targets:
+  ClawIsland:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - ClawIsland
+    info:
+      path: ClawIsland/Resources/Info.plist
+      properties:
+        CFBundleName: ClawIsland
+        CFBundleDisplayName: Claw Island
+        CFBundleIdentifier: com.zhangjin.claw-island
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        LSMinimumSystemVersion: "14.0"
+        LSUIElement: true
+        NSPrincipalClass: NSApplication
+        NSSupportsAutomaticTermination: false
+        NSApplicationSupportsSecureRestorableState: true
+    entitlements:
+      path: ClawIsland/Resources/ClawIsland.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+        com.apple.security.files.user-selected.read-write: true
+    dependencies:
+      - target: ClawBridge
+        embed: true
+        link: false
+        codeSign: false
+        destination: Resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zhangjin.claw-island
+        INFOPLIST_FILE: ClawIsland/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: ClawIsland/Resources/ClawIsland.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+  ClawBridge:
+    type: tool
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - ClawBridge
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zhangjin.claw-bridge
+        SWIFT_VERSION: "6.0"
