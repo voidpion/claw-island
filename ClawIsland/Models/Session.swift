@@ -19,6 +19,7 @@ final class Session: ObservableObject, Identifiable {
     @Published var currentTool: String?
     @Published var model: String?
     @Published var customTitle: String?
+    @Published var lastUserPrompt: String?
     @Published var subagentCount: Int = 0
     @Published var startTime: Date = Date()
     @Published var lastActivity: Date = Date()
