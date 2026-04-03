@@ -91,6 +91,7 @@ final class SocketServer: @unchecked Sendable {
         }
 
         log("received \(data.count) bytes")
+        log("raw: \(String(data: data, encoding: .utf8) ?? "<binary>")")
 
         let event: HookEvent
         do {

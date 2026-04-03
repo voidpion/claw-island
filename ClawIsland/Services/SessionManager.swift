@@ -78,16 +78,9 @@ final class SessionManager: ObservableObject {
 
     private func handlePostToolUse(_ e: PostToolUseEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        // Keep the tool name visible for 1.5s so the user can read it, then go idle
+        // Stay in running state — next pre_tool_use will update the tool name,
+        // or stop will transition to completed. No idle flash mid-conversation.
         s.lastActivity = Date()
-        Task {
-            try? await Task.sleep(for: .milliseconds(1500))
-            // Only clear if still showing this tool (not replaced by a new PreToolUse)
-            if case .running(let tool) = s.status, tool == e.toolName {
-                s.status      = .idle
-                s.currentTool = nil
-            }
-        }
     }
 
     private func handleNotification(_ e: NotificationEvent) {
@@ -102,11 +95,16 @@ final class SessionManager: ObservableObject {
     private func handleUserPromptSubmit(_ e: UserPromptSubmitEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
         let trimmed = e.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Only set once — first prompt establishes the session title; later prompts don't override.
-        if !trimmed.isEmpty && s.customTitle == nil {
-            s.customTitle = String(trimmed.prefix(40))
+        if !trimmed.isEmpty {
+            // Only set once — first prompt establishes the session title; later prompts don't override.
+            if s.customTitle == nil {
+                s.customTitle = String(trimmed.prefix(40))
+            }
+            s.lastUserPrompt = String(trimmed.prefix(60))
         }
-        s.status = .idle
+        // Show as running("thinking") — Claude has received the message and is about to work.
+        // pre_tool_use will replace this with the actual tool name shortly.
+        s.status = .running(toolName: "thinking")
         s.currentTool = nil
         s.lastActivity = Date()
     }

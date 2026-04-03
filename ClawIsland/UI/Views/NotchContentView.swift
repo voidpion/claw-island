@@ -147,7 +147,7 @@ private struct ContentHeightKey: PreferenceKey {
 private struct NotchPill: View {
     let expanded: Bool
     private var bottomRadius: CGFloat { expanded ? 20 : 12 }
-    private let outerRadius: CGFloat = 10  // top outer (concave) corners
+    private let outerRadius: CGFloat = 18  // top outer (concave) corners
 
     var body: some View {
         GeometryReader { geo in
@@ -192,11 +192,11 @@ private struct NotchPillShape: Shape & InsettableShape {
         p.move(to: CGPoint(x: x + or, y: y))
         p.addLine(to: CGPoint(x: x + w - or, y: y))
 
-        // Top-right outer corner: center at (x+w, y), arc from 180° to 90° clockwise on screen
+        // Top-right outer corner: center at (x+w, y), 270° CW-on-screen arc flaring outward
         p.addArc(center: CGPoint(x: x + w, y: y),
                  radius: or,
                  startAngle: .degrees(180), endAngle: .degrees(90),
-                 clockwise: true)
+                 clockwise: false)
 
         // Right edge → bottom-right inner corner
         p.addLine(to: CGPoint(x: x + w, y: y + h - br))
@@ -212,7 +212,7 @@ private struct NotchPillShape: Shape & InsettableShape {
                  startAngle: .degrees(90), endAngle: .degrees(180),
                  clockwise: false)
 
-        // Left edge → top-left outer corner: center at (x, y), arc from 90° to 0° counter-clockwise on screen
+        // Left edge → top-left outer corner: center at (x, y), 270° CW-on-screen arc flaring outward
         p.addLine(to: CGPoint(x: x, y: y + or))
         p.addArc(center: CGPoint(x: x, y: y),
                  radius: or,
