@@ -8,6 +8,7 @@ final class NotchViewModel: ObservableObject {
     @Published var expanded = false
     @Published var contentHeight: CGFloat = 0   // measured by SwiftUI, 0 = unknown yet
     @Published var collapsedHeight: CGFloat = 32 // real notch height; updated from safeAreaInsets
+    @Published var notchWidth: CGFloat = 0       // hardware notch width; 0 on non-notch screens
 }
 
 @MainActor
@@ -39,7 +40,7 @@ final class NotchWindowController: NSWindowController {
         super.init(window: window)
 
         notchScreen = Self.findNotchScreen()
-        updateCollapsedHeight()
+        updateNotchGeometry()
         setupContentView()
         positionOnNotch(animated: false)
 
@@ -90,15 +91,25 @@ final class NotchWindowController: NSWindowController {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.notchScreen = Self.findNotchScreen()
-                self?.updateCollapsedHeight()
+                self?.updateNotchGeometry()
                 self?.positionOnNotch(animated: false)
             }
             .store(in: &cancellables)
     }
 
-    private func updateCollapsedHeight() {
-        let inset = (notchScreen ?? NSScreen.main)?.safeAreaInsets.top ?? 0
+    private func updateNotchGeometry() {
+        let screen = notchScreen ?? NSScreen.main
+        // Height from safeAreaInsets
+        let inset = screen?.safeAreaInsets.top ?? 0
         viewModel.collapsedHeight = inset > 0 ? inset : Self.collapsedHeight
+        // Width: screen width minus the two auxiliary strips flanking the notch
+        if let screen,
+           let left  = screen.auxiliaryTopLeftArea,
+           let right = screen.auxiliaryTopRightArea {
+            viewModel.notchWidth = max(screen.frame.width - left.width - right.width, 0)
+        } else {
+            viewModel.notchWidth = 0
+        }
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -212,7 +223,8 @@ final class NotchWindowController: NSWindowController {
         let sf = screen.frame
         let expanded = viewModel.expanded
 
-        let w = expanded ? Self.expandedWidth : Self.collapsedWidth
+        let collapsedW = viewModel.notchWidth > 0 ? viewModel.notchWidth * 2 : Self.collapsedWidth
+        let w = expanded ? Self.expandedWidth : collapsedW
         let measured = viewModel.contentHeight
         let h: CGFloat = expanded
             ? min(max(measured > 0 ? measured : Self.expandedMinHeight, Self.expandedMinHeight),

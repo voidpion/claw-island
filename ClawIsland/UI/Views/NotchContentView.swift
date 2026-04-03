@@ -42,38 +42,50 @@ struct NotchContentView: View {
     }
 
     // MARK: - Compact bar
+    // Layout: [left: icon + dots] [center gap = notch] [right: message + count]
 
     private var compactBar: some View {
-        HStack(spacing: 6) {
-            AgentIcon(hasApproval: hasApprovalPending,
-                      hasSessions: !sessionManager.sessions.isEmpty)
+        HStack(spacing: 0) {
+            // Left wing
+            HStack(spacing: 6) {
+                AgentIcon(hasApproval: hasApprovalPending,
+                          hasSessions: !sessionManager.sessions.isEmpty)
+                HStack(spacing: 4) {
+                    ForEach(sessionManager.sessions) { s in
+                        StatusDot(session: s)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.leading, 14)
+            .frame(maxWidth: .infinity)
 
-            HStack(spacing: 4) {
-                ForEach(sessionManager.sessions) { s in
-                    StatusDot(session: s)
+            // Center gap — the hardware notch lives here, no content
+            if viewModel.notchWidth > 0 {
+                Spacer().frame(width: viewModel.notchWidth)
+            }
+
+            // Right wing
+            HStack(spacing: 6) {
+                Spacer(minLength: 0)
+                if let msg = featuredCompactMessage {
+                    Text(msg)
+                        .font(.system(size: 10, weight: .regular, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.45))
+                        .lineLimit(1)
+                        .transition(.opacity)
+                        .animation(.easeOut(duration: 0.2), value: msg)
+                }
+                let count = sessionManager.sessions.count
+                if count > 0 {
+                    Text(count == 1 ? "1 session" : "\(count) sessions")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.25))
                 }
             }
-
-            if let msg = featuredCompactMessage {
-                Text(msg)
-                    .font(.system(size: 10, weight: .regular, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.45))
-                    .lineLimit(1)
-                    .transition(.opacity)
-                    .animation(.easeOut(duration: 0.2), value: msg)
-            }
-
-            Spacer(minLength: 0)
-
-            let count = sessionManager.sessions.count
-            if count > 0 {
-                Text(count == 1 ? "1 session" : "\(count) sessions")
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.25))
-                    .transition(.opacity)
-            }
+            .padding(.trailing, 14)
+            .frame(maxWidth: .infinity)
         }
-        .padding(.horizontal, 14)
     }
 
     private var featuredCompactMessage: String? {
