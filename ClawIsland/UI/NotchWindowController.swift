@@ -40,6 +40,15 @@ final class NotchWindowController: NSWindowController {
         notchScreen = Self.findNotchScreen()
         setupContentView()
         positionOnNotch(animated: false)
+
+        // Force-expand for permission requests and notifications
+        sessionManager.onAutoExpand = { [weak self] in
+            guard let self, !viewModel.expanded else { return }
+            withAnimation(.spring(response: 0.44, dampingFraction: 0.60)) {
+                viewModel.expanded = true
+            }
+        }
+
         sessionManager.start()
         startMouseMonitor()
 
@@ -230,4 +239,8 @@ final class NotchHostingView: NSHostingView<AnyView> {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
     required init(rootView: AnyView) { super.init(rootView: rootView) }
+
+    // Non-activating panel windows don't forward clicks to subviews unless
+    // acceptsFirstMouse returns true — without this, all buttons are dead.
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }

@@ -46,11 +46,14 @@ struct ApprovalView: View {
 
             // ── Buttons ──────────────────────────────────────────────
             HStack(spacing: 6) {
-                ApprovalButton(label: "Allow", color: Color(red: 0.15, green: 0.8, blue: 0.45)) {
-                    sessionManager.approve(session: session)
+                ApprovalButton(label: "Ignore", color: Color(white: 0.45)) {
+                    sessionManager.ignore(session: session)
                 }
                 ApprovalButton(label: "Deny", color: Color(red: 1.0, green: 0.35, blue: 0.35)) {
                     sessionManager.deny(session: session)
+                }
+                ApprovalButton(label: "Allow", color: Color(red: 0.15, green: 0.8, blue: 0.45)) {
+                    sessionManager.approve(session: session)
                 }
             }
         }
