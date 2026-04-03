@@ -12,11 +12,9 @@ final class SessionManager: ObservableObject {
 
     func start() {
         requestNotificationPermission()
-        Task {
-            try? await socketServer.start { [weak self] event in
-                guard let self else { return nil }
-                return await self.handle(event: event)
-            }
+        try? socketServer.start { [weak self] event in
+            guard let self else { return nil }
+            return await self.handle(event: event)
         }
     }
 
@@ -43,6 +41,7 @@ final class SessionManager: ObservableObject {
     // MARK: - Handlers
 
     private func handleSessionStart(_ e: SessionStartEvent) {
+        debugLog("handleSessionStart id=\(e.sessionId) sessions.count=\(sessions.count)")
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
         s.status = .idle
         s.currentTool = nil
@@ -194,7 +193,20 @@ final class SessionManager: ObservableObject {
         if let existing = sessions.first(where: { $0.id == id }) { return existing }
         let s = Session(id: id, transcriptPath: transcriptPath)
         sessions.append(s)
+        debugLog("findOrCreate: created new session, total=\(sessions.count)")
         return s
+    }
+
+    private func debugLog(_ msg: String) {
+        let line = "\(Date()) [SM] \(msg)\n"
+        if let data = line.data(using: .utf8) {
+            let url = URL(fileURLWithPath: "/tmp/claw-island.log")
+            if let fh = try? FileHandle(forWritingTo: url) {
+                fh.seekToEndOfFile(); fh.write(data); fh.closeFile()
+            } else {
+                try? data.write(to: url, options: .atomic)
+            }
+        }
     }
 
     private func requestNotificationPermission() {

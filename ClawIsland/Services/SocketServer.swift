@@ -5,17 +5,20 @@ import Foundation
 //
 // Protocol: [4-byte big-endian length][JSON bytes]
 // Response (PermissionRequest only): [4-byte big-endian length][JSON bytes]
+//
+// Important: accept() is a blocking POSIX call. It MUST run on a real OS thread
+// (Thread.detachNewThread), NOT inside Swift's cooperative async task system.
+// Putting it in Task.detached / actor async methods blocks the cooperative thread
+// pool, causing the socket to appear bound but never accept connections.
 
-actor SocketServer {
+final class SocketServer: @unchecked Sendable {
     static let socketPath = "/tmp/claw-island.sock"
 
     private var serverFD: Int32 = -1
-    private var isRunning = false
     private var eventHandler: (@MainActor (HookEvent) async -> HookResponse?)?
 
     func start(onEvent: @escaping @MainActor (HookEvent) async -> HookResponse?) throws {
         self.eventHandler = onEvent
-        isRunning = true
 
         unlink(Self.socketPath)
 
@@ -39,54 +42,89 @@ actor SocketServer {
         guard bindResult == 0 else { close(fd); throw POSIXError(.EADDRINUSE) }
         guard listen(fd, 16) == 0 else { close(fd); throw POSIXError(.ECONNREFUSED) }
 
-        Task.detached(priority: .utility) { [weak self] in
-            await self?.acceptLoop()
+        Self.log("socket listening on \(Self.socketPath), fd=\(fd)")
+
+        // Run the blocking accept() loop on a dedicated OS thread — never in Swift concurrency.
+        let handler = onEvent
+        Thread.detachNewThread {
+            Self.acceptLoop(serverFD: fd, handler: handler)
         }
     }
 
     func stop() {
-        isRunning = false
         if serverFD >= 0 { close(serverFD); serverFD = -1 }
         unlink(Self.socketPath)
     }
 
-    // MARK: - Accept loop
+    // MARK: - Accept loop (OS thread)
 
-    private func acceptLoop() async {
-        while isRunning && serverFD >= 0 {
+    private static func acceptLoop(
+        serverFD: Int32,
+        handler: @escaping @MainActor (HookEvent) async -> HookResponse?
+    ) {
+        log("acceptLoop started fd=\(serverFD)")
+        while true {
             let clientFD = accept(serverFD, nil, nil)
-            guard clientFD >= 0 else { break }
-            let handler = eventHandler
+            guard clientFD >= 0 else {
+                log("acceptLoop: accept failed errno=\(errno)")
+                break
+            }
+            log("accepted clientFD=\(clientFD)")
             Task.detached(priority: .utility) {
-                await SocketServer.handle(fd: clientFD, handler: handler)
+                await Self.handle(fd: clientFD, handler: handler)
             }
         }
+        log("acceptLoop exited")
     }
 
     // MARK: - Per-connection handler
 
     private static func handle(
         fd: Int32,
-        handler: (@MainActor (HookEvent) async -> HookResponse?)?
+        handler: @escaping @MainActor (HookEvent) async -> HookResponse?
     ) async {
         defer { close(fd) }
 
-        guard let data = readLengthPrefixed(fd: fd) else { return }
+        guard let data = readLengthPrefixed(fd: fd) else {
+            log("readLengthPrefixed failed fd=\(fd)")
+            return
+        }
+
+        log("received \(data.count) bytes")
 
         let event: HookEvent
         do {
             event = try JSONDecoder().decode(HookEvent.self, from: data)
+            log("decoded sessionId=\(event.sessionId)")
         } catch {
-            // Unknown or malformed event — ignore silently
+            log("decode error: \(error)")
             return
         }
 
-        let response = await handler?(event)
+        log("calling handler...")
+        let response = await handler(event)
+        log("handler returned, response=\(response != nil ? "yes" : "nil")")
 
         // Only PermissionRequest waits for a response
         if case .permissionRequest = event, let response,
            let bytes = try? JSONEncoder().encode(response) {
             writeLengthPrefixed(fd: fd, data: bytes)
+        }
+    }
+
+    // MARK: - Debug log (writes to /tmp/claw-island.log for diagnosis)
+
+    private static func log(_ msg: String) {
+        let line = "\(Date()) \(msg)\n"
+        if let data = line.data(using: .utf8) {
+            let url = URL(fileURLWithPath: "/tmp/claw-island.log")
+            if let fh = try? FileHandle(forWritingTo: url) {
+                fh.seekToEndOfFile()
+                fh.write(data)
+                fh.closeFile()
+            } else {
+                try? data.write(to: url, options: .atomic)
+            }
         }
     }
 
