@@ -176,6 +176,15 @@ final class SessionManager: ObservableObject {
         session.status = .idle
     }
 
+    /// Silently allow — dismisses the approval UI without surfacing a decision to the model.
+    func ignore(session: Session) {
+        session.pendingApprovalContinuation?.resume(
+            returning: HookResponse(decision: .allow, reason: nil)
+        )
+        session.pendingApprovalContinuation = nil
+        session.status = .idle
+    }
+
     // MARK: - Helpers
 
     private func findOrCreate(id: String, transcriptPath: String?) -> Session {
