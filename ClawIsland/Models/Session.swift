@@ -4,6 +4,7 @@ enum SessionStatus: Sendable {
     case idle
     case running(toolName: String)
     case waitingApproval(PermissionRequestEvent)
+    case notifying(message: String)
     case compacting
     case completed
     case failed
@@ -11,17 +12,17 @@ enum SessionStatus: Sendable {
 
 @MainActor
 final class Session: ObservableObject, Identifiable {
-    let id: String                       // Claude session_id
-    let transcriptPath: String?          // path to the transcript file
+    let id: String
+    let transcriptPath: String?
 
     @Published var status: SessionStatus = .idle
     @Published var currentTool: String?
     @Published var model: String?
-    @Published var customTitle: String?   // set from UserPromptSubmit
+    @Published var customTitle: String?
+    @Published var subagentCount: Int = 0
     @Published var startTime: Date = Date()
     @Published var lastActivity: Date = Date()
 
-    /// Pending approval continuation — ClawBridge task blocks on this
     var pendingApprovalContinuation: CheckedContinuation<HookResponse, Never>?
 
     init(id: String, transcriptPath: String?) {
@@ -29,20 +30,12 @@ final class Session: ObservableObject, Identifiable {
         self.transcriptPath = transcriptPath
     }
 
-    /// Derive a human-readable title from the transcript path.
-    /// The transcript lives at ~/.claude/projects/<encoded-cwd>/<session-id>.jsonl
-    /// so the parent directory name encodes the working directory.
     var title: String {
         if let t = customTitle, !t.isEmpty { return t }
         guard let tp = transcriptPath else { return shortId }
-        // Decode the encoded path segment — Claude replaces "/" with "-"
         let dirName = URL(fileURLWithPath: tp).deletingLastPathComponent().lastPathComponent
-        // The encoded form is like "-Users-zhangjin-Documents-github-myproject"
-        // Drop the leading dash and replace dashes at path boundaries
         if dirName.hasPrefix("-") {
-            let stripped = String(dirName.dropFirst())
-            // Heuristic: last path component is the project folder
-            let parts = stripped.components(separatedBy: "-")
+            let parts = String(dirName.dropFirst()).components(separatedBy: "-")
             if let last = parts.last, !last.isEmpty { return last }
         }
         return shortId
@@ -57,5 +50,55 @@ final class Session: ObservableObject, Identifiable {
         if hours > 0 { return "\(hours)h" }
         if minutes > 0 { return "\(minutes)m" }
         return "<1m"
+    }
+
+    /// Priority for picking which session to feature in the collapsed bar.
+    /// Higher = more urgent.
+    var statusPriority: Int {
+        switch status {
+        case .waitingApproval: return 5
+        case .notifying:       return 4
+        case .running:         return 3
+        case .failed:          return 3
+        case .compacting:      return 2
+        case .completed:       return 1
+        case .idle:            return 0
+        }
+    }
+
+    /// One-liner shown in the collapsed notch bar for the featured session.
+    var compactMessage: String? {
+        switch status {
+        case .idle:            return nil
+        case .running(let t): return t
+        case .waitingApproval: return "Needs approval"
+        case .notifying(let m):
+            let s = m.trimmingCharacters(in: .whitespacesAndNewlines)
+            return s.count > 28 ? String(s.prefix(28)) + "…" : s
+        case .compacting:      return "Compacting…"
+        case .completed:       return "Done · \(elapsedTime)"
+        case .failed:          return "Failed"
+        }
+    }
+
+    /// Human-readable subtitle derived from current status
+    var subtitle: String? {
+        switch status {
+        case .idle:
+            return subagentCount > 0 ? "↳ \(subagentCount) subagent\(subagentCount > 1 ? "s" : "")" : nil
+        case .running(let tool):
+            let base = tool
+            return subagentCount > 0 ? "\(base)  ↳ \(subagentCount)" : base
+        case .waitingApproval:
+            return "Awaiting approval…"
+        case .notifying(let msg):
+            return msg
+        case .compacting:
+            return "Compacting context…"
+        case .completed:
+            return "Done · \(elapsedTime)"
+        case .failed:
+            return "Failed"
+        }
     }
 }

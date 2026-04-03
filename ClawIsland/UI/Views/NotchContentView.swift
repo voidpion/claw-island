@@ -47,14 +47,39 @@ struct NotchContentView: View {
         HStack(spacing: 6) {
             AgentIcon(hasApproval: hasApprovalPending,
                       hasSessions: !sessionManager.sessions.isEmpty)
+
             HStack(spacing: 4) {
                 ForEach(sessionManager.sessions) { s in
                     StatusDot(session: s)
                 }
             }
+
+            if let msg = featuredCompactMessage {
+                Text(msg)
+                    .font(.system(size: 10, weight: .regular, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .lineLimit(1)
+                    .transition(.opacity)
+                    .animation(.easeOut(duration: 0.2), value: msg)
+            }
+
             Spacer(minLength: 0)
+
+            let count = sessionManager.sessions.count
+            if count > 0 {
+                Text(count == 1 ? "1 session" : "\(count) sessions")
+                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.25))
+                    .transition(.opacity)
+            }
         }
         .padding(.horizontal, 14)
+    }
+
+    private var featuredCompactMessage: String? {
+        sessionManager.sessions
+            .max(by: { $0.statusPriority < $1.statusPriority })
+            .flatMap { $0.compactMessage }
     }
 
     // MARK: - Expanded panel
