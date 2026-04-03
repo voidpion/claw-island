@@ -49,15 +49,15 @@ struct SessionRowView: View {
                     .foregroundStyle(.white.opacity(0.9))
                     .lineLimit(1)
 
-                if let tool = session.currentTool {
-                    Text(tool)
+                if let sub = session.subtitle {
+                    Text(sub)
                         .font(.system(size: 10, weight: .regular, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.4))
                         .lineLimit(1)
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
             }
-            .animation(.easeOut(duration: 0.2), value: session.currentTool)
+            .animation(.easeOut(duration: 0.2), value: session.subtitle)
 
             Spacer(minLength: 4)
 

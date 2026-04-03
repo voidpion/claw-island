@@ -177,6 +177,7 @@ struct StatusDot: View {
         case .idle:            return .white.opacity(0.28)
         case .running:         return Color(red: 0.2, green: 0.9, blue: 0.5)
         case .waitingApproval: return .orange
+        case .notifying:       return Color(red: 0.7, green: 0.4, blue: 1.0)
         case .compacting:      return Color(red: 0.9, green: 0.8, blue: 0.2)
         case .completed:       return Color(red: 0.35, green: 0.6, blue: 1.0)
         case .failed:          return Color(red: 1.0, green: 0.35, blue: 0.35)
