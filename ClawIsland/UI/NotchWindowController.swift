@@ -7,6 +7,7 @@ import Combine
 final class NotchViewModel: ObservableObject {
     @Published var expanded = false
     @Published var contentHeight: CGFloat = 0   // measured by SwiftUI, 0 = unknown yet
+    @Published var collapsedHeight: CGFloat = 32 // real notch height; updated from safeAreaInsets
 }
 
 @MainActor
@@ -38,6 +39,7 @@ final class NotchWindowController: NSWindowController {
         super.init(window: window)
 
         notchScreen = Self.findNotchScreen()
+        updateCollapsedHeight()
         setupContentView()
         positionOnNotch(animated: false)
 
@@ -88,12 +90,30 @@ final class NotchWindowController: NSWindowController {
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.notchScreen = Self.findNotchScreen()
+                self?.updateCollapsedHeight()
                 self?.positionOnNotch(animated: false)
             }
             .store(in: &cancellables)
     }
 
+    private func updateCollapsedHeight() {
+        let inset = (notchScreen ?? NSScreen.main)?.safeAreaInsets.top ?? 0
+        viewModel.collapsedHeight = inset > 0 ? inset : Self.collapsedHeight
+    }
+
     required init?(coder: NSCoder) { fatalError() }
+
+    private func debugLog(_ msg: String) {
+        let line = "\(Date()) [NWC] \(msg)\n"
+        if let data = line.data(using: .utf8) {
+            let url = URL(fileURLWithPath: "/tmp/claw-island.log")
+            if let fh = try? FileHandle(forWritingTo: url) {
+                fh.seekToEndOfFile(); fh.write(data); fh.closeFile()
+            } else {
+                try? data.write(to: url, options: .atomic)
+            }
+        }
+    }
 
     deinit {
         // mouseMonitor removal done via NotificationCenter / lifecycle — safe to skip in deinit
@@ -155,14 +175,23 @@ final class NotchWindowController: NSWindowController {
     // MARK: - Visibility
 
     private func updateVisibility(hasSessions: Bool) {
-        guard let window else { return }
+        guard let window else {
+            debugLog("updateVisibility: window is nil")
+            return
+        }
+        debugLog("updateVisibility hasSessions=\(hasSessions) isVisible=\(window.isVisible) alpha=\(window.alphaValue)")
         if hasSessions {
-            guard !window.isVisible else { return }
+            guard !window.isVisible else {
+                debugLog("updateVisibility: already visible, skip")
+                return
+            }
             window.alphaValue = 0
             window.orderFrontRegardless()
-            NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.22
-                window.animator().alphaValue = 1
+            DispatchQueue.main.async {
+                NSAnimationContext.runAnimationGroup { ctx in
+                    ctx.duration = 0.22
+                    window.animator().alphaValue = 1
+                }
             }
         } else {
             viewModel.expanded = false
@@ -188,7 +217,7 @@ final class NotchWindowController: NSWindowController {
         let h: CGFloat = expanded
             ? min(max(measured > 0 ? measured : Self.expandedMinHeight, Self.expandedMinHeight),
                   Self.expandedMaxHeight)
-            : Self.collapsedHeight
+            : viewModel.collapsedHeight
 
         let x = sf.minX + (sf.width - w) / 2
         let y = sf.maxY - h

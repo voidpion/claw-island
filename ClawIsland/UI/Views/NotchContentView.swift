@@ -17,7 +17,7 @@ struct NotchContentView: View {
 
             VStack(spacing: 0) {
                 compactBar
-                    .frame(height: NotchWindowController.collapsedHeight)
+                    .frame(height: viewModel.collapsedHeight)
 
                 if viewModel.expanded {
                     expandedPanel
@@ -107,13 +107,13 @@ struct NotchContentView: View {
                             key: ContentHeightKey.self,
                             value: geo.size.height
                                 + 20                                           // vertical padding
-                                + NotchWindowController.collapsedHeight        // compact bar
+                                + viewModel.collapsedHeight                    // compact bar
                         )
                     }
                 )
             }
             .frame(maxHeight: NotchWindowController.expandedMaxHeight
-                   - NotchWindowController.collapsedHeight)
+                   - viewModel.collapsedHeight)
         }
         .onPreferenceChange(ContentHeightKey.self) { h in
             viewModel.contentHeight = h
@@ -135,28 +135,80 @@ private struct ContentHeightKey: PreferenceKey {
 private struct NotchPill: View {
     let expanded: Bool
     private var bottomRadius: CGFloat { expanded ? 20 : 12 }
+    private let outerRadius: CGFloat = 10  // top outer (concave) corners
 
     var body: some View {
         GeometryReader { geo in
-            UnevenRoundedRectangle(
-                topLeadingRadius: 0, bottomLeadingRadius: bottomRadius,
-                bottomTrailingRadius: bottomRadius, topTrailingRadius: 0,
-                style: .continuous
-            )
-            .fill(LinearGradient(
-                colors: [Color(white: 0.11), Color(white: 0.04)],
-                startPoint: .top, endPoint: .bottom
-            ))
-            .overlay(
-                UnevenRoundedRectangle(
-                    topLeadingRadius: 0, bottomLeadingRadius: bottomRadius,
-                    bottomTrailingRadius: bottomRadius, topTrailingRadius: 0,
-                    style: .continuous
+            NotchPillShape(bottomRadius: bottomRadius, outerTopRadius: outerRadius)
+                .fill(LinearGradient(
+                    colors: [Color(white: 0.11), Color(white: 0.04)],
+                    startPoint: .top, endPoint: .bottom
+                ))
+                .overlay(
+                    NotchPillShape(bottomRadius: bottomRadius, outerTopRadius: outerRadius)
+                        .strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5)
                 )
-                .strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5)
-            )
-            .frame(width: geo.size.width, height: geo.size.height)
+                .frame(width: geo.size.width, height: geo.size.height)
         }
+    }
+}
+
+// MARK: - Notch pill shape
+// Top corners: outer/concave (arc center at corner point, curves outward into notch hardware).
+// Bottom corners: inner/convex standard rounded corners.
+// The outer top arcs extend above y=0 — the window clips them at the screen edge,
+// creating a seamless "pulled down from notch" effect on notch Macs.
+
+private struct NotchPillShape: Shape & InsettableShape {
+    var bottomRadius: CGFloat
+    var outerTopRadius: CGFloat
+    var insetAmount: CGFloat = 0
+
+    func inset(by amount: CGFloat) -> NotchPillShape {
+        var s = self; s.insetAmount += amount; return s
+    }
+
+    func path(in rect: CGRect) -> Path {
+        let r = rect.insetBy(dx: insetAmount, dy: insetAmount)
+        let w = r.width, h = r.height
+        let x = r.minX, y = r.minY
+        let br = min(bottomRadius - insetAmount, min(w, h) / 2)
+        let or = max(outerTopRadius + insetAmount, 0)
+
+        var p = Path()
+        // Top edge (between the two outer corner tangent points)
+        p.move(to: CGPoint(x: x + or, y: y))
+        p.addLine(to: CGPoint(x: x + w - or, y: y))
+
+        // Top-right outer corner: center at (x+w, y), arc from 180° to 90° clockwise on screen
+        p.addArc(center: CGPoint(x: x + w, y: y),
+                 radius: or,
+                 startAngle: .degrees(180), endAngle: .degrees(90),
+                 clockwise: true)
+
+        // Right edge → bottom-right inner corner
+        p.addLine(to: CGPoint(x: x + w, y: y + h - br))
+        p.addArc(center: CGPoint(x: x + w - br, y: y + h - br),
+                 radius: br,
+                 startAngle: .degrees(0), endAngle: .degrees(90),
+                 clockwise: false)
+
+        // Bottom edge → bottom-left inner corner
+        p.addLine(to: CGPoint(x: x + br, y: y + h))
+        p.addArc(center: CGPoint(x: x + br, y: y + h - br),
+                 radius: br,
+                 startAngle: .degrees(90), endAngle: .degrees(180),
+                 clockwise: false)
+
+        // Left edge → top-left outer corner: center at (x, y), arc from 90° to 0° counter-clockwise on screen
+        p.addLine(to: CGPoint(x: x, y: y + or))
+        p.addArc(center: CGPoint(x: x, y: y),
+                 radius: or,
+                 startAngle: .degrees(90), endAngle: .degrees(0),
+                 clockwise: false)
+
+        p.closeSubpath()
+        return p
     }
 }
 
