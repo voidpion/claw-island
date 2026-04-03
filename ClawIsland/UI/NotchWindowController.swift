@@ -1,0 +1,233 @@
+import AppKit
+import SwiftUI
+import Combine
+
+// Shared state: AppKit controller writes, SwiftUI view reads.
+@MainActor
+final class NotchViewModel: ObservableObject {
+    @Published var expanded = false
+    @Published var contentHeight: CGFloat = 0   // measured by SwiftUI, 0 = unknown yet
+}
+
+@MainActor
+final class NotchWindowController: NSWindowController {
+    private let sessionManager: SessionManager
+    let viewModel = NotchViewModel()
+
+    private var cancellables = Set<AnyCancellable>()
+    private var collapseTask: Task<Void, Never>?
+    private var mouseMonitor: Any?
+
+    // Cached notch screen — never changes at runtime (only on display config change)
+    private var notchScreen: NSScreen?
+
+    // The frame we INTEND the window to occupy (used for hover hit-test,
+    // so we compare against target rather than the mid-animation frame)
+    private var targetFrame: CGRect = .zero
+
+    // Notch geometry
+    static let collapsedWidth: CGFloat    = 220
+    static let collapsedHeight: CGFloat   = 32
+    static let expandedWidth: CGFloat     = 520
+    static let expandedMaxHeight: CGFloat = 480
+    static let expandedMinHeight: CGFloat = 100   // shown while content is still measuring
+
+    init(sessionManager: SessionManager) {
+        self.sessionManager = sessionManager
+        let window = NotchWindow()
+        super.init(window: window)
+
+        notchScreen = Self.findNotchScreen()
+        setupContentView()
+        positionOnNotch(animated: false)
+        sessionManager.start()
+        startMouseMonitor()
+
+        // Show / hide as sessions appear / disappear
+        sessionManager.$sessions
+            .receive(on: RunLoop.main)
+            .sink { [weak self] sessions in
+                self?.updateVisibility(hasSessions: !sessions.isEmpty)
+            }
+            .store(in: &cancellables)
+
+        // Reposition when expand state changes, or content height is measured while expanded
+        viewModel.$expanded
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.positionOnNotch(animated: true) }
+            .store(in: &cancellables)
+
+        viewModel.$contentHeight
+            .receive(on: RunLoop.main)
+            .filter { [weak self] _ in self?.viewModel.expanded == true }
+            .removeDuplicates()
+            .sink { [weak self] _ in self?.positionOnNotch(animated: true) }
+            .store(in: &cancellables)
+
+        // Re-cache screen when display configuration changes
+        NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.notchScreen = Self.findNotchScreen()
+                self?.positionOnNotch(animated: false)
+            }
+            .store(in: &cancellables)
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    deinit {
+        // mouseMonitor removal done via NotificationCenter / lifecycle — safe to skip in deinit
+    }
+
+    // MARK: - Hover via global mouse monitor
+
+    private func startMouseMonitor() {
+        // Global monitor fires even when the app is not frontmost (.accessory policy)
+        mouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .mouseEntered, .mouseExited]) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.evaluateHover()
+            }
+        }
+    }
+
+    private func evaluateHover() {
+        let mouse = NSEvent.mouseLocation
+        // Compare against the TARGET frame, not the current (potentially mid-animation) frame
+        let hovering = targetFrame.contains(mouse)
+
+        let hasApproval = sessionManager.sessions.contains {
+            if case .waitingApproval = $0.status { return true }
+            return false
+        }
+
+        if hovering {
+            collapseTask?.cancel()
+            collapseTask = nil
+            if !viewModel.expanded {
+                withAnimation(.spring(response: 0.44, dampingFraction: 0.60)) {
+                    viewModel.expanded = true
+                }
+            }
+        } else if viewModel.expanded && !hasApproval {
+            guard collapseTask == nil else { return }
+            collapseTask = Task {
+                try? await Task.sleep(for: .milliseconds(150))
+                guard !Task.isCancelled else { return }
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                    viewModel.expanded = false
+                }
+                collapseTask = nil
+            }
+        }
+    }
+
+    // MARK: - Content
+
+    private func setupContentView() {
+        let root = NotchContentView()
+            .environmentObject(sessionManager)
+            .environmentObject(viewModel)
+        let hv = NotchHostingView(rootView: root)
+        hv.sizingOptions = []
+        window?.contentView = hv
+    }
+
+    // MARK: - Visibility
+
+    private func updateVisibility(hasSessions: Bool) {
+        guard let window else { return }
+        if hasSessions {
+            guard !window.isVisible else { return }
+            window.alphaValue = 0
+            window.orderFrontRegardless()
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.22
+                window.animator().alphaValue = 1
+            }
+        } else {
+            viewModel.expanded = false
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = 0.18
+                window.animator().alphaValue = 0
+            } completionHandler: { [weak window] in
+                window?.orderOut(nil)
+            }
+        }
+    }
+
+    // MARK: - Frame
+
+    private func positionOnNotch(animated: Bool) {
+        let screen = notchScreen ?? NSScreen.main
+        guard let screen else { return }
+        let sf = screen.frame
+        let expanded = viewModel.expanded
+
+        let w = expanded ? Self.expandedWidth : Self.collapsedWidth
+        let measured = viewModel.contentHeight
+        let h: CGFloat = expanded
+            ? min(max(measured > 0 ? measured : Self.expandedMinHeight, Self.expandedMinHeight),
+                  Self.expandedMaxHeight)
+            : Self.collapsedHeight
+
+        let x = sf.minX + (sf.width - w) / 2
+        let y = sf.maxY - h
+        let newFrame = CGRect(x: x, y: y, width: w, height: h)
+        targetFrame = newFrame  // always update target before animating
+
+        if animated {
+            NSAnimationContext.runAnimationGroup { ctx in
+                ctx.duration = expanded ? 0.52 : 0.32
+                ctx.timingFunction = expanded
+                    ? CAMediaTimingFunction(controlPoints: 0.20, 1.40, 0.36, 1.0)
+                    : CAMediaTimingFunction(controlPoints: 0.40, 0.00, 0.20, 1.0)
+                ctx.allowsImplicitAnimation = true
+                window?.animator().setFrame(newFrame, display: true)
+            }
+        } else {
+            window?.setFrame(newFrame, display: false)
+        }
+    }
+
+    // MARK: - Screen detection
+
+    private static func findNotchScreen() -> NSScreen? {
+        // Prefer built-in display with hardware notch (safeAreaInsets.top > 0)
+        NSScreen.screens.first { $0.safeAreaInsets.top > 0 }
+            ?? NSScreen.screens.first { $0.localizedName.lowercased().contains("built-in") }
+            ?? NSScreen.main
+    }
+}
+
+// MARK: - NotchWindow
+
+final class NotchWindow: NSWindow {
+    init() {
+        super.init(
+            contentRect: .zero,
+            styleMask: [.borderless, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        isOpaque = false
+        backgroundColor = .clear
+        level = .statusBar
+        collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        isMovableByWindowBackground = false
+        hasShadow = false
+        ignoresMouseEvents = false
+        alphaValue = 0
+    }
+}
+
+// MARK: - NotchHostingView
+
+final class NotchHostingView: NSHostingView<AnyView> {
+    init<V: View>(rootView: V) {
+        super.init(rootView: AnyView(rootView))
+    }
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+    required init(rootView: AnyView) { super.init(rootView: rootView) }
+}

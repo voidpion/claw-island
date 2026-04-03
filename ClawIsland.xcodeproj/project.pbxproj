@@ -1,0 +1,502 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		2F9207D26D30757C2A8E98EF /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACC86E20AA39EA09983E26A /* SessionRowView.swift */; };
+		46BB371B5A4B145A80515E19 /* NotchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C13AAD262B3CDDD07B05501 /* NotchWindowController.swift */; };
+		92945122E98097B2B1A86351 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFBE54FF1B1636C050200165 /* Assets.xcassets */; };
+		9CE78737233CA569F7F63D73 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE47FFB343A580FBEFC2C7B0 /* AppDelegate.swift */; };
+		AC539128565B734EB2DFCE35 /* ClawBridge in Resources */ = {isa = PBXBuildFile; fileRef = B6DC4ECB30C6ABED113600E4 /* ClawBridge */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		BDA3351E763B0BC4C7C12E24 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8E0D57B57BA11EB8065CD1 /* main.swift */; };
+		BDF30DFABBD57B28C94BD67D /* HookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596420CF0DB64168E7E7AA05 /* HookInstaller.swift */; };
+		BE1FDD0178A03059E1FA3D44 /* NotchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0548E445B8068EB0F91C0E55 /* NotchContentView.swift */; };
+		C7B2BC78320750AE0F4FF3CB /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E737419728991C3F18BE38 /* Session.swift */; };
+		D2015570780D1105927AA5A5 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308561B660F3FA742C46EC03 /* SessionManager.swift */; };
+		F0A2912E231992810D5D12A0 /* HookEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3A1884265334D9436B3D3D /* HookEvent.swift */; };
+		F734E70BBC66DFB6646C60A7 /* SocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA55D9D6C83B586FE6F46EC5 /* SocketServer.swift */; };
+		FA407B1DC12BB5051E9AFAB3 /* ClawIslandApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ADE82F193B993E5FE906CD7 /* ClawIslandApp.swift */; };
+		FBC50D2A60B14DEDC8505D1B /* ApprovalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC3D8CC7F0BEBF0DCA129EEF /* ApprovalView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		938333CB6CC67B7C888C24F1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3F0FFB9CF94FBD0B3B501D2D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 52EA96575D9CBCD93CBF63D0;
+			remoteInfo = ClawBridge;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0548E445B8068EB0F91C0E55 /* NotchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchContentView.swift; sourceTree = "<group>"; };
+		0ADE82F193B993E5FE906CD7 /* ClawIslandApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClawIslandApp.swift; sourceTree = "<group>"; };
+		261DCC8B0F496084F068F12D /* ClawIsland.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClawIsland.entitlements; sourceTree = "<group>"; };
+		308561B660F3FA742C46EC03 /* SessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
+		3ACC86E20AA39EA09983E26A /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
+		596420CF0DB64168E7E7AA05 /* HookInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookInstaller.swift; sourceTree = "<group>"; };
+		67E737419728991C3F18BE38 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		7A8E0D57B57BA11EB8065CD1 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		7C13AAD262B3CDDD07B05501 /* NotchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchWindowController.swift; sourceTree = "<group>"; };
+		B6DC4ECB30C6ABED113600E4 /* ClawBridge */ = {isa = PBXFileReference; includeInIndex = 0; path = ClawBridge; sourceTree = BUILT_PRODUCTS_DIR; };
+		BA3A1884265334D9436B3D3D /* HookEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookEvent.swift; sourceTree = "<group>"; };
+		BA55D9D6C83B586FE6F46EC5 /* SocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketServer.swift; sourceTree = "<group>"; };
+		BE47FFB343A580FBEFC2C7B0 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		D4CBC763EC605038F75F038F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		DFBE54FF1B1636C050200165 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		EE269547517F43B4B14BA9EB /* ClawIsland.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClawIsland.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FC3D8CC7F0BEBF0DCA129EEF /* ApprovalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApprovalView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		08054515B78FCA379A064E61 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+				7C13AAD262B3CDDD07B05501 /* NotchWindowController.swift */,
+				391C3D19106E4225E434089E /* Views */,
+			);
+			path = UI;
+			sourceTree = "<group>";
+		};
+		08DF155D834826688BE3032A /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				DFBE54FF1B1636C050200165 /* Assets.xcassets */,
+				261DCC8B0F496084F068F12D /* ClawIsland.entitlements */,
+				D4CBC763EC605038F75F038F /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		391C3D19106E4225E434089E /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				FC3D8CC7F0BEBF0DCA129EEF /* ApprovalView.swift */,
+				0548E445B8068EB0F91C0E55 /* NotchContentView.swift */,
+				3ACC86E20AA39EA09983E26A /* SessionRowView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		3F9A2537EF38DBB0576C54C3 /* ClawIsland */ = {
+			isa = PBXGroup;
+			children = (
+				9075352EE57A1B4A58455B19 /* App */,
+				46F9D35CAA9FF697A80C82D8 /* Models */,
+				08DF155D834826688BE3032A /* Resources */,
+				E375644A0CC7E4B82FADBCB1 /* Services */,
+				08054515B78FCA379A064E61 /* UI */,
+			);
+			path = ClawIsland;
+			sourceTree = "<group>";
+		};
+		46F9D35CAA9FF697A80C82D8 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BA3A1884265334D9436B3D3D /* HookEvent.swift */,
+				67E737419728991C3F18BE38 /* Session.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		9075352EE57A1B4A58455B19 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				BE47FFB343A580FBEFC2C7B0 /* AppDelegate.swift */,
+				0ADE82F193B993E5FE906CD7 /* ClawIslandApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A24AC91CA0C5EF64B5A08D34 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B6DC4ECB30C6ABED113600E4 /* ClawBridge */,
+				EE269547517F43B4B14BA9EB /* ClawIsland.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E375644A0CC7E4B82FADBCB1 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				596420CF0DB64168E7E7AA05 /* HookInstaller.swift */,
+				308561B660F3FA742C46EC03 /* SessionManager.swift */,
+				BA55D9D6C83B586FE6F46EC5 /* SocketServer.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		E7DCAA93AB4EB300AF80EC9B /* ClawBridge */ = {
+			isa = PBXGroup;
+			children = (
+				7A8E0D57B57BA11EB8065CD1 /* main.swift */,
+			);
+			path = ClawBridge;
+			sourceTree = "<group>";
+		};
+		E8BA6CE7157538BFF4103EA4 = {
+			isa = PBXGroup;
+			children = (
+				E7DCAA93AB4EB300AF80EC9B /* ClawBridge */,
+				3F9A2537EF38DBB0576C54C3 /* ClawIsland */,
+				A24AC91CA0C5EF64B5A08D34 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		52EA96575D9CBCD93CBF63D0 /* ClawBridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1A197EB054CD3D0C3C8980C7 /* Build configuration list for PBXNativeTarget "ClawBridge" */;
+			buildPhases = (
+				D873F406D1B01819D3A113F8 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ClawBridge;
+			packageProductDependencies = (
+			);
+			productName = ClawBridge;
+			productReference = B6DC4ECB30C6ABED113600E4 /* ClawBridge */;
+			productType = "com.apple.product-type.tool";
+		};
+		7163EF368AF2124839EF0E0C /* ClawIsland */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B02DA16995BF5FD98D34ADB2 /* Build configuration list for PBXNativeTarget "ClawIsland" */;
+			buildPhases = (
+				A4496F73FF540D5200A27482 /* Sources */,
+				CB3329FADBDEB3656E53725B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B87115A90C66DCD89BD2CF94 /* PBXTargetDependency */,
+			);
+			name = ClawIsland;
+			packageProductDependencies = (
+			);
+			productName = ClawIsland;
+			productReference = EE269547517F43B4B14BA9EB /* ClawIsland.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3F0FFB9CF94FBD0B3B501D2D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					52EA96575D9CBCD93CBF63D0 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					7163EF368AF2124839EF0E0C = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 98F669EAA4D0F87DA7523C5E /* Build configuration list for PBXProject "ClawIsland" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E8BA6CE7157538BFF4103EA4;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A24AC91CA0C5EF64B5A08D34 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				52EA96575D9CBCD93CBF63D0 /* ClawBridge */,
+				7163EF368AF2124839EF0E0C /* ClawIsland */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CB3329FADBDEB3656E53725B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				92945122E98097B2B1A86351 /* Assets.xcassets in Resources */,
+				AC539128565B734EB2DFCE35 /* ClawBridge in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A4496F73FF540D5200A27482 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9CE78737233CA569F7F63D73 /* AppDelegate.swift in Sources */,
+				FBC50D2A60B14DEDC8505D1B /* ApprovalView.swift in Sources */,
+				FA407B1DC12BB5051E9AFAB3 /* ClawIslandApp.swift in Sources */,
+				F0A2912E231992810D5D12A0 /* HookEvent.swift in Sources */,
+				BDF30DFABBD57B28C94BD67D /* HookInstaller.swift in Sources */,
+				BE1FDD0178A03059E1FA3D44 /* NotchContentView.swift in Sources */,
+				46BB371B5A4B145A80515E19 /* NotchWindowController.swift in Sources */,
+				C7B2BC78320750AE0F4FF3CB /* Session.swift in Sources */,
+				D2015570780D1105927AA5A5 /* SessionManager.swift in Sources */,
+				2F9207D26D30757C2A8E98EF /* SessionRowView.swift in Sources */,
+				F734E70BBC66DFB6646C60A7 /* SocketServer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D873F406D1B01819D3A113F8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BDA3351E763B0BC4C7C12E24 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B87115A90C66DCD89BD2CF94 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 52EA96575D9CBCD93CBF63D0 /* ClawBridge */;
+			targetProxy = 938333CB6CC67B7C888C24F1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		36B28B57D5B0C696584860E8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		5A836C7DAC64EBF12B1AF86A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ClawIsland/Resources/ClawIsland.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = ClawIsland/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zhangjin.claw-island";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		5DE8B9AD5E4BBC2BF20C5780 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zhangjin.claw-bridge";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		870B54518FCD36CFD7B4A199 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zhangjin.claw-bridge";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		B837B70B6BFCCB899B517BBC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = ClawIsland/Resources/ClawIsland.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = ClawIsland/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zhangjin.claw-island";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		EA6C3139266AABB85DB94ED3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1A197EB054CD3D0C3C8980C7 /* Build configuration list for PBXNativeTarget "ClawBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				870B54518FCD36CFD7B4A199 /* Debug */,
+				5DE8B9AD5E4BBC2BF20C5780 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		98F669EAA4D0F87DA7523C5E /* Build configuration list for PBXProject "ClawIsland" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				36B28B57D5B0C696584860E8 /* Debug */,
+				EA6C3139266AABB85DB94ED3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B02DA16995BF5FD98D34ADB2 /* Build configuration list for PBXNativeTarget "ClawIsland" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A836C7DAC64EBF12B1AF86A /* Debug */,
+				B837B70B6BFCCB899B517BBC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3F0FFB9CF94FBD0B3B501D2D /* Project object */;
+}
