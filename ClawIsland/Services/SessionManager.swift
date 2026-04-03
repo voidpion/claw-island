@@ -127,20 +127,14 @@ final class SessionManager: ObservableObject {
             body: "\(s.title) · \(s.elapsedTime)",
             id: s.id + "-stop"
         )
-        // Remove from list after 10s
-        Task {
-            try? await Task.sleep(for: .seconds(10))
-            sessions.removeAll { $0.id == e.sessionId }
-        }
+        // Do NOT remove here — Stop fires after every response, not just at session end.
+        // SessionEnd handles removal when the user actually exits claude.
     }
 
     private func handleSessionEnd(_ e: SessionEndEvent) {
-        // SessionEnd often follows Stop; avoid double-remove
-        guard let s = sessions.first(where: { $0.id == e.sessionId }) else { return }
-        if case .completed = s.status { return }  // already handled by Stop
-        s.status = .completed
+        // User exited claude — remove after a brief delay so "Done" is readable.
         Task {
-            try? await Task.sleep(for: .seconds(10))
+            try? await Task.sleep(for: .seconds(5))
             sessions.removeAll { $0.id == e.sessionId }
         }
     }
