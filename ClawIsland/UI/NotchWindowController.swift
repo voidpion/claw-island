@@ -43,7 +43,17 @@ final class NotchWindowController: NSWindowController {
 
         // Force-expand for permission requests and notifications
         sessionManager.onAutoExpand = { [weak self] in
-            guard let self, !viewModel.expanded else { return }
+            guard let self else { return }
+            // If this is an approval request, bring window to front so buttons are interactive.
+            let hasApproval = sessionManager.sessions.contains {
+                if case .waitingApproval = $0.status { return true }
+                return false
+            }
+            if hasApproval {
+                NSApp.activate(ignoringOtherApps: true)
+                self.window?.makeKeyAndOrderFront(nil)
+            }
+            guard !viewModel.expanded else { return }
             withAnimation(.spring(response: 0.44, dampingFraction: 0.60)) {
                 viewModel.expanded = true
             }

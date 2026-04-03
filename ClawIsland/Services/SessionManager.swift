@@ -161,6 +161,7 @@ final class SessionManager: ObservableObject {
     // MARK: - Approval (called from UI)
 
     func approve(session: Session) {
+        NSLog("[ClawIsland] approve called — continuation present: %d", session.pendingApprovalContinuation != nil ? 1 : 0)
         session.pendingApprovalContinuation?.resume(
             returning: HookResponse(decision: .allow, reason: nil)
         )
@@ -169,6 +170,7 @@ final class SessionManager: ObservableObject {
     }
 
     func deny(session: Session, reason: String? = nil) {
+        NSLog("[ClawIsland] deny called — continuation present: %d", session.pendingApprovalContinuation != nil ? 1 : 0)
         session.pendingApprovalContinuation?.resume(
             returning: HookResponse(decision: .deny, reason: reason)
         )
@@ -178,6 +180,7 @@ final class SessionManager: ObservableObject {
 
     /// Silently allow — dismisses the approval UI without surfacing a decision to the model.
     func ignore(session: Session) {
+        NSLog("[ClawIsland] ignore called — continuation present: %d", session.pendingApprovalContinuation != nil ? 1 : 0)
         session.pendingApprovalContinuation?.resume(
             returning: HookResponse(decision: .allow, reason: nil)
         )
