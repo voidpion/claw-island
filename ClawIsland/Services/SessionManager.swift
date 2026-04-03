@@ -5,6 +5,9 @@ import UserNotifications
 final class SessionManager: ObservableObject {
     @Published var sessions: [Session] = []
 
+    /// Controller sets this to be notified when a session needs the panel auto-expanded
+    var onAutoExpand: (() -> Void)?
+
     private let socketServer = SocketServer()
 
     func start() {
@@ -21,105 +24,138 @@ final class SessionManager: ObservableObject {
 
     private func handle(event: HookEvent) async -> HookResponse? {
         switch event {
-        case .sessionStart(let e):
-            handleSessionStart(e)
-        case .permissionRequest(let e):
-            return await handlePermissionRequest(e)
-        case .preToolUse(let e):
-            handlePreToolUse(e)
-        case .postToolUse(let e):
-            handlePostToolUse(e)
-        case .notification(let e):
-            handleNotification(e)
-        case .stop(let e):
-            handleStop(e)
-        case .sessionEnd(let e):
-            handleSessionEnd(e)
-        case .userPromptSubmit(let e):
-            handleUserPromptSubmit(e)
-        case .preCompact(let e):
-            handlePreCompact(e)
-        case .subagentStart, .subagentStop, .unknown:
-            // Update last activity timestamp
-            if let session = sessions.first(where: { $0.id == event.sessionId }) {
-                session.lastActivity = Date()
-            }
+        case .sessionStart(let e):      handleSessionStart(e)
+        case .permissionRequest(let e): return await handlePermissionRequest(e)
+        case .preToolUse(let e):        handlePreToolUse(e)
+        case .postToolUse(let e):       handlePostToolUse(e)
+        case .notification(let e):      handleNotification(e)
+        case .stop(let e):              handleStop(e)
+        case .sessionEnd(let e):        handleSessionEnd(e)
+        case .userPromptSubmit(let e):  handleUserPromptSubmit(e)
+        case .preCompact(let e):        handlePreCompact(e)
+        case .subagentStart(let e):     handleSubagentStart(e)
+        case .subagentStop(let e):      handleSubagentStop(e)
+        case .unknown:                  break
         }
         return nil
     }
 
-    // MARK: - Specific handlers
+    // MARK: - Handlers
 
     private func handleSessionStart(_ e: SessionStartEvent) {
-        let session = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        session.status = .idle
-        session.startTime = Date()
-        session.lastActivity = Date()
-        session.model = e.model
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        s.status = .idle
+        s.currentTool = nil
+        s.lastActivity = Date()
+        if let model = e.model { s.model = model }
+        // compact / resume: session continues — preserve title and start time.
+        // startup / clear / unknown: fresh session, fully reset.
+        let isContinuation = e.source == "compact" || e.source == "resume"
+        if isContinuation {
+            s.subagentCount = 0
+        } else {
+            s.startTime = Date()
+            s.customTitle = nil
+            s.subagentCount = 0
+        }
     }
 
     private func handlePermissionRequest(_ e: PermissionRequestEvent) async -> HookResponse {
-        let session = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        session.status = .waitingApproval(e)
-        session.lastActivity = Date()
-
-        // Suspend this async task until the user taps Allow or Deny in the UI
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        s.status = .waitingApproval(e)
+        s.lastActivity = Date()
+        onAutoExpand?()
         return await withCheckedContinuation { continuation in
-            session.pendingApprovalContinuation = continuation
+            s.pendingApprovalContinuation = continuation
         }
     }
 
     private func handlePreToolUse(_ e: PreToolUseEvent) {
-        let session = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        session.status = .running(toolName: e.toolName)
-        session.currentTool = e.toolName
-        session.lastActivity = Date()
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        s.status      = .running(toolName: e.toolName)
+        s.currentTool = e.toolName
+        s.lastActivity = Date()
     }
 
     private func handlePostToolUse(_ e: PostToolUseEvent) {
-        let session = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        session.status = .idle
-        session.currentTool = nil
-        session.lastActivity = Date()
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        // Keep the tool name visible for 1.5s so the user can read it, then go idle
+        s.lastActivity = Date()
+        Task {
+            try? await Task.sleep(for: .milliseconds(1500))
+            // Only clear if still showing this tool (not replaced by a new PreToolUse)
+            if case .running(let tool) = s.status, tool == e.toolName {
+                s.status      = .idle
+                s.currentTool = nil
+            }
+        }
     }
 
     private func handleNotification(_ e: NotificationEvent) {
-        let session = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        session.lastActivity = Date()
-        // Could surface the message in the UI; for now, ignore
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        let msg = e.message.trimmingCharacters(in: .whitespacesAndNewlines)
+        s.status = .notifying(message: String(msg.prefix(60)))
+        s.lastActivity = Date()
+        onAutoExpand?()
+        sendSystemNotification(title: e.title ?? s.title, body: msg, id: e.sessionId + "-notif")
     }
 
     private func handleUserPromptSubmit(_ e: UserPromptSubmitEvent) {
-        let session = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        // Use the first ~40 chars of the prompt as the session title
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
         let trimmed = e.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
-        let title = String(trimmed.prefix(40))
-        if !title.isEmpty { session.customTitle = title }
-        session.lastActivity = Date()
+        // Only set once — first prompt establishes the session title; later prompts don't override.
+        if !trimmed.isEmpty && s.customTitle == nil {
+            s.customTitle = String(trimmed.prefix(40))
+        }
+        s.status = .idle
+        s.currentTool = nil
+        s.lastActivity = Date()
     }
 
     private func handlePreCompact(_ e: PreCompactEvent) {
-        let session = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        session.status = .compacting
-        session.lastActivity = Date()
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        s.status = .compacting
+        s.lastActivity = Date()
     }
 
     private func handleStop(_ e: StopEvent) {
-        let session = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        session.status = .completed
-        session.currentTool = nil
-        session.lastActivity = Date()
-        sendCompletionNotification(for: session)
-    }
-
-    private func handleSessionEnd(_ e: SessionEndEvent) {
-        guard let session = sessions.first(where: { $0.id == e.sessionId }) else { return }
-        session.status = .completed
-        // Remove after a short delay so user can see the completed state
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        s.status      = .completed
+        s.currentTool = nil
+        s.lastActivity = Date()
+        sendSystemNotification(
+            title: "Task Completed",
+            body: "\(s.title) · \(s.elapsedTime)",
+            id: s.id + "-stop"
+        )
+        // Remove from list after 10s
         Task {
             try? await Task.sleep(for: .seconds(10))
             sessions.removeAll { $0.id == e.sessionId }
         }
+    }
+
+    private func handleSessionEnd(_ e: SessionEndEvent) {
+        // SessionEnd often follows Stop; avoid double-remove
+        guard let s = sessions.first(where: { $0.id == e.sessionId }) else { return }
+        if case .completed = s.status { return }  // already handled by Stop
+        s.status = .completed
+        Task {
+            try? await Task.sleep(for: .seconds(10))
+            sessions.removeAll { $0.id == e.sessionId }
+        }
+    }
+
+    private func handleSubagentStart(_ e: SubagentStartEvent) {
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        s.subagentCount += 1
+        s.lastActivity = Date()
+    }
+
+    private func handleSubagentStop(_ e: SubagentStopEvent) {
+        guard let s = sessions.first(where: { $0.id == e.sessionId }) else { return }
+        s.subagentCount = max(0, s.subagentCount - 1)
+        s.lastActivity = Date()
     }
 
     // MARK: - Approval (called from UI)
@@ -143,24 +179,24 @@ final class SessionManager: ObservableObject {
     // MARK: - Helpers
 
     private func findOrCreate(id: String, transcriptPath: String?) -> Session {
-        if let existing = sessions.first(where: { $0.id == id }) {
-            return existing
-        }
-        let session = Session(id: id, transcriptPath: transcriptPath)
-        sessions.append(session)
-        return session
+        if let existing = sessions.first(where: { $0.id == id }) { return existing }
+        let s = Session(id: id, transcriptPath: transcriptPath)
+        sessions.append(s)
+        return s
     }
 
     private func requestNotificationPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+        UNUserNotificationCenter.current()
+            .requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    private func sendCompletionNotification(for session: Session) {
+    private func sendSystemNotification(title: String, body: String, id: String) {
         let content = UNMutableNotificationContent()
-        content.title = "Task Completed"
-        content.body = "\(session.title) — \(session.elapsedTime)"
+        content.title = title
+        content.body  = body
         content.sound = .default
-        let request = UNNotificationRequest(identifier: session.id + "-stop", content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: id, content: content, trigger: nil)
+        )
     }
 }
