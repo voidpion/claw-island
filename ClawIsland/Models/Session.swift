@@ -76,8 +76,7 @@ final class Session: ObservableObject, Identifiable {
         case .running(let t): return t
         case .waitingApproval: return "Needs approval"
         case .notifying(let m):
-            let s = m.trimmingCharacters(in: .whitespacesAndNewlines)
-            return s.count > 28 ? String(s.prefix(28)) + "…" : s
+            return m.trimmingCharacters(in: .whitespacesAndNewlines)
         case .compacting:      return "Compacting…"
         case .completed:       return "Done · \(elapsedTime)"
         case .failed:          return "Failed"
@@ -88,7 +87,9 @@ final class Session: ObservableObject, Identifiable {
     var subtitle: String? {
         switch status {
         case .idle:
-            return subagentCount > 0 ? "↳ \(subagentCount) subagent\(subagentCount > 1 ? "s" : "")" : nil
+            if subagentCount > 0 { return "↳ \(subagentCount) subagent\(subagentCount > 1 ? "s" : "")" }
+            if customTitle == nil && lastUserPrompt == nil { return "new session" }
+            return nil
         case .running(let tool):
             let base = tool
             return subagentCount > 0 ? "\(base)  ↳ \(subagentCount)" : base

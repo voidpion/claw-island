@@ -132,8 +132,7 @@ final class SessionManager: ObservableObject {
         if let cwd, display.hasPrefix(cwd + "/") {
             display = String(display.dropFirst(cwd.count + 1))
         }
-        let truncated = String(display.prefix(80))
-        return "\(name): \(truncated)"
+        return "\(name): \(display)"
     }
 
     private func handlePostToolUse(_ e: PostToolUseEvent) {
@@ -146,7 +145,7 @@ final class SessionManager: ObservableObject {
     private func handleNotification(_ e: NotificationEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
         let msg = e.message.trimmingCharacters(in: .whitespacesAndNewlines)
-        s.status = .notifying(message: String(msg.prefix(60)))
+        s.status = .notifying(message: msg)
         s.lastActivity = Date()
         onAutoExpand?()
         sendSystemNotification(title: e.title ?? s.title, body: msg, id: e.sessionId + "-notif")
@@ -158,9 +157,9 @@ final class SessionManager: ObservableObject {
         if !trimmed.isEmpty {
             // Only set once — first prompt establishes the session title; later prompts don't override.
             if s.customTitle == nil {
-                s.customTitle = String(trimmed.prefix(40))
+                s.customTitle = trimmed
             }
-            s.lastUserPrompt = String(trimmed.prefix(60))
+            s.lastUserPrompt = trimmed
         }
         // Show as running("thinking") — Claude has received the message and is about to work.
         // pre_tool_use will replace this with the actual tool name shortly.
@@ -371,7 +370,7 @@ final class SessionManager: ObservableObject {
             else { continue }
             if obj["type"] as? String == "user",
                let text = Self.extractUserText(obj) {
-                firstUserContent = String(text.prefix(40))
+                firstUserContent = text
                 break
             }
         }
@@ -390,7 +389,7 @@ final class SessionManager: ObservableObject {
 
             if type == "user", lastUserPrompt == nil,
                let text = Self.extractUserText(obj) {
-                lastUserPrompt = String(text.prefix(60))
+                lastUserPrompt = text
             }
 
             if lastModel != nil && lastUserPrompt != nil { break }
