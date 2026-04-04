@@ -28,6 +28,22 @@ struct NotchContentView: View {
                     .frame(height: viewModel.collapsedHeight + 6, alignment: .center)
 
                 if viewModel.expanded {
+                    // 渐隐分隔线：两端透明，中间白色细线
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .clear,              location: 0.0),
+                                    .init(color: .white.opacity(0.10), location: 0.18),
+                                    .init(color: .white.opacity(0.10), location: 0.82),
+                                    .init(color: .clear,              location: 1.0),
+                                ],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
+                        .frame(height: 0.5)
+                        .transition(.opacity)
+
                     expandedPanel
                         .transition(
                             .asymmetric(

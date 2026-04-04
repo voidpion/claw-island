@@ -67,13 +67,16 @@ final class NotchWindowController: NSWindowController {
         sessionManager.start()
         startMouseMonitor()
 
-        // Show / hide as sessions appear / disappear
+        // 有审批请求时自动收起展开面板
         sessionManager.$sessions
             .receive(on: RunLoop.main)
             .sink { [weak self] sessions in
-                self?.updateVisibility(hasSessions: !sessions.isEmpty)
+                if sessions.isEmpty { self?.viewModel.expanded = false }
             }
             .store(in: &cancellables)
+
+        // 常驻显示：启动后立即展示岛
+        showPersistent()
 
         // Reposition when expand state changes, or content height is measured while expanded
         viewModel.$expanded
@@ -195,33 +198,15 @@ final class NotchWindowController: NSWindowController {
 
     // MARK: - Visibility
 
-    private func updateVisibility(hasSessions: Bool) {
-        guard let window else {
-            debugLog("updateVisibility: window is nil")
-            return
-        }
-        debugLog("updateVisibility hasSessions=\(hasSessions) isVisible=\(window.isVisible) alpha=\(window.alphaValue)")
-        if hasSessions {
-            guard !window.isVisible || window.alphaValue == 0 else {
-                debugLog("updateVisibility: already visible, skip")
-                return
-            }
-            window.alphaValue = 0
-            window.orderFrontRegardless()
-            DispatchQueue.main.async {
-                NSAnimationContext.runAnimationGroup { ctx in
-                    ctx.duration = 0.22
-                    window.animator().alphaValue = 1
-                }
-            }
-        } else {
-            viewModel.expanded = false
-            NSAnimationContext.runAnimationGroup { ctx in
-                ctx.duration = 0.18
-                window.animator().alphaValue = 0
-            } completionHandler: { [weak window] in
-                window?.orderOut(nil)
-            }
+    /// 岛常驻显示，启动时调用一次即可。
+    private func showPersistent() {
+        guard let window else { return }
+        guard !window.isVisible || window.alphaValue == 0 else { return }
+        window.alphaValue = 0
+        window.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.22
+            window.animator().alphaValue = 1
         }
     }
 

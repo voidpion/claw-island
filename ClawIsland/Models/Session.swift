@@ -25,6 +25,7 @@ final class Session: ObservableObject, Identifiable {
     @Published var lastActivity: Date = Date()
     @Published var cwd: String?
     var pid: pid_t?
+    var tty: String?      // controlling terminal path, e.g. "/dev/ttys003"
 
     var pendingApprovalContinuation: CheckedContinuation<HookResponse, Never>?
 
