@@ -192,12 +192,14 @@ struct SessionStartEvent: Codable, Sendable {
     let transcriptPath: String?
     let source: String?   // "startup" | "resume" | "clear" | "compact"
     let model: String?
+    let cwd: String?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case source
         case model
+        case cwd
     }
 }
 

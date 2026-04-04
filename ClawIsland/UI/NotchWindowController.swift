@@ -88,7 +88,7 @@ final class NotchWindowController: NSWindowController {
             .sink { [weak self] _ in self?.positionOnNotch(animated: true) }
             .store(in: &cancellables)
 
-        // Reposition when collapsed content width changes
+        // collapsedContentWidth = 最小 sideWidth（由 dots 宽度推算），session 数量变化时更新窗口
         viewModel.$collapsedContentWidth
             .receive(on: RunLoop.main)
             .filter { [weak self] _ in self?.viewModel.expanded == false }
@@ -233,10 +233,11 @@ final class NotchWindowController: NSWindowController {
         let sf = screen.frame
         let expanded = viewModel.expanded
 
+        // collapsedContentWidth = 最小 sideWidth；窗口 = sideWidth × 2 + notch
         let collapsedW: CGFloat = {
-            let measured = viewModel.collapsedContentWidth
+            let side = viewModel.collapsedContentWidth > 0 ? viewModel.collapsedContentWidth : 90
             let notch = viewModel.notchWidth > 0 ? viewModel.notchWidth : 0
-            return measured > 0 ? max(measured, notch + 40) : (notch > 0 ? notch * 2 : Self.collapsedWidth)
+            return side * 2 + notch
         }()
         let w = expanded ? Self.expandedWidth : collapsedW
         let measured = viewModel.contentHeight

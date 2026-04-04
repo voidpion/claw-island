@@ -47,9 +47,7 @@ Session 状态只在有意义的语义边界切换，不因实现细节产生无
 
 ```
 ┌──────────────────── NotchPill（背景形状）────────────────────┐
-│  NotchPillShape: 上宽下窄药丸                                │
-│  顶部：全宽直边 + 两侧 concave 弧（半径 br）                   │
-│  底部：标准内圆角（半径 br），比顶部窄 2×br                     │
+│  NotchPillShape: 顶边全宽直角，底部两侧内圆角（半径 br）        │
 │  topBleed: 窗口向上超出屏幕 6pt，实现无缝衔接                  │
 │                                                              │
 │  ┌─ compactBar（折叠态，始终可见）────────────────────────┐   │
@@ -75,7 +73,7 @@ Session 状态只在有意义的语义边界切换，不因实现细节产生无
 | 名称 | 文件 | 说明 |
 |------|------|------|
 | **NotchPill** | NotchContentView | 背景视图，渐变填充 + 边框描边 |
-| **NotchPillShape** | NotchContentView | Shape：上宽下窄药丸，concave 顶角 + convex 底角 |
+| **NotchPillShape** | NotchContentView | Shape：顶边全宽直角，底部 convex 圆角（半径 br） |
 | **compactBar** | NotchContentView | 折叠态横条，三段布局：左翼/中间缺口/右翼 |
 | **AgentIcon** | NotchContentView | 左翼最左侧图标（waveform / 盾牌），有 approval 时脉冲橙色光晕 |
 | **StatusDot** | NotchContentView | 左翼小圆点（6pt），每个 session 一个，running 时脉冲 |
@@ -117,6 +115,21 @@ SessionRowView 在展开态下显示以下内容：
 |------|------|------|
 | modelBadge | `session_start` 的 `model` 字段 | Claude Code 不总是发送此字段，可能缺失 |
 | elapsedTimeBadge | `session.startTime` 到现在的时长 | 格式：`<1m` / `3m` / `1h`，始终显示 |
+
+### NotchPillShape 顶角设计备忘
+
+当前：顶角为直角（90°），与屏幕上边缘齐平，内容由 `clipShape(NotchPillShape)` 约束在可见区域内。
+
+**曾用方案 — concave 顶角（已移除）**
+
+顶角使用 quadratic bezier 向内凹弧，半径与底角相同（`br`）。路径逻辑：
+
+```
+左顶角：起点 (x, y) → 终点 (x+br, y+br)，控制点 (x+br, y)
+右顶角：起点 (x+w, y) → 终点 (x+w-br, y+br)，控制点 (x+w-br, y)
+```
+
+控制点在形状外侧，曲线向内弯，产生"挖角"效果。设计意图是让 pill 像从屏幕边缘自然生长出来，与硬件 notch 边缘呼应。**代价**：凹弧区域是透明的，桌面内容会从顶角漏出。因此暂时改为直角，待找到合适的遮罩或合成方案后可重新引入。
 
 ### 两种状态
 
