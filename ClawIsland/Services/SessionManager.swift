@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import UserNotifications
 
@@ -280,6 +281,7 @@ final class SessionManager: ObservableObject {
             s.status = .idle
             s.lastActivity = Date()
             s.cwd = cwd
+            s.pid = pid_t(pid)
 
             // Set startTime from startedAt (epoch ms)
             if let startedAt = obj["startedAt"] as? TimeInterval {
@@ -345,6 +347,94 @@ final class SessionManager: ObservableObject {
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: id, content: content, trigger: nil)
         )
+    }
+
+    // MARK: - Window focus
+
+    /// 点击 session 行时，激活对应的终端/编辑器窗口。
+    /// 策略：进程树向上找到终端 app → AX API 枚举窗口 → 按 cwd 目录名匹配标题 → raise 指定窗口。
+    func focusWindow(for session: Session) {
+        let claudePid: pid_t
+        if let stored = session.pid {
+            claudePid = stored
+        } else if let found = lookupPID(sessionId: session.id) {
+            claudePid = found
+        } else {
+            return
+        }
+        guard let app = findAncestorApp(of: claudePid) else { return }
+
+        // 有 Accessibility 权限时精准定位窗口；否则退化到激活 app
+        if AXIsProcessTrusted() {
+            raiseWindow(appPid: app.processIdentifier, session: session)
+        } else {
+            // 首次：弹出 Accessibility 授权请求，下次点击生效
+            let key = "AXTrustedCheckOptionPrompt" as CFString
+            AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
+            app.activate(options: .activateIgnoringOtherApps)
+        }
+    }
+
+    /// 用 AX API 找到标题包含 session cwd 目录名的窗口并 raise。
+    private func raiseWindow(appPid: pid_t, session: Session) {
+        let axApp = AXUIElementCreateApplication(appPid)
+        var windowsRef: AnyObject?
+        guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+              let windows = windowsRef as? [AXUIElement], !windows.isEmpty else {
+            NSRunningApplication(processIdentifier: appPid)?.activate(options: .activateIgnoringOtherApps)
+            return
+        }
+
+        // 用 cwd 最后一段目录名匹配窗口标题
+        let dirName = session.cwd.map { URL(fileURLWithPath: $0).lastPathComponent } ?? ""
+        var target: AXUIElement = windows[0]
+        if !dirName.isEmpty {
+            for window in windows {
+                var titleRef: AnyObject?
+                if AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef) == .success,
+                   let title = titleRef as? String, title.contains(dirName) {
+                    target = window
+                    break
+                }
+            }
+        }
+
+        AXUIElementPerformAction(target, kAXRaiseAction as CFString)
+        NSRunningApplication(processIdentifier: appPid)?.activate(options: .activateIgnoringOtherApps)
+    }
+
+    /// 从 ~/.claude/sessions/<id>.json 读取 PID。
+    private func lookupPID(sessionId: String) -> pid_t? {
+        let url = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/sessions/\(sessionId).json")
+        guard let data = try? Data(contentsOf: url),
+              let obj  = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let pid  = obj["pid"] as? Int else { return nil }
+        return pid_t(pid)
+    }
+
+    /// sysctl로 指定 PID 의 부모 PID 를 반환。
+    private func parentPID(of pid: pid_t) -> pid_t? {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.size
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else { return nil }
+        let ppid = info.kp_eproc.e_ppid
+        return ppid > 1 ? ppid : nil
+    }
+
+    /// 向上遍历进程树，返回第一个有 bundle ID 的 macOS app（即终端/编辑器）。
+    private func findAncestorApp(of pid: pid_t) -> NSRunningApplication? {
+        var current = pid
+        for _ in 0..<10 {
+            guard let ppid = parentPID(of: current) else { break }
+            if let app = NSRunningApplication(processIdentifier: ppid),
+               app.bundleIdentifier != nil {
+                return app
+            }
+            current = ppid
+        }
+        return nil
     }
 
     // MARK: - Transcript parsing

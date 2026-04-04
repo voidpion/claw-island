@@ -26,6 +26,7 @@ struct SessionRowView: View {
         .background(rowBackground)
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .onHover { hovered = $0 }
+        .onTapGesture { sessionManager.focusWindow(for: session) }
         .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isWaiting)
     }
 
