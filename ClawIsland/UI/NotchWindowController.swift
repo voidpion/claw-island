@@ -33,6 +33,7 @@ final class NotchWindowController: NSWindowController {
     static let expandedWidth: CGFloat     = 520
     static let expandedMaxHeight: CGFloat = 480
     static let expandedMinHeight: CGFloat = 100   // shown while content is still measuring
+    static let topBleed: CGFloat         = 6      // extra height above screen edge for seamless top
 
     init(sessionManager: SessionManager) {
         self.sessionManager = sessionManager
@@ -231,10 +232,11 @@ final class NotchWindowController: NSWindowController {
                   Self.expandedMaxHeight)
             : viewModel.collapsedHeight
 
+        let bleed = Self.topBleed
         let x = sf.minX + (sf.width - w) / 2
-        let y = sf.maxY - h
-        let newFrame = CGRect(x: x, y: y, width: w, height: h)
-        targetFrame = newFrame  // always update target before animating
+        let y = sf.maxY - h - bleed
+        let newFrame = CGRect(x: x, y: y, width: w, height: h + bleed)
+        targetFrame = CGRect(x: x, y: sf.maxY - h, width: w, height: h) // hover uses visible frame
 
         if animated {
             NSAnimationContext.runAnimationGroup { ctx in

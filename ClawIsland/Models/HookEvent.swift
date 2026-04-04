@@ -345,4 +345,9 @@ indirect enum JSONValue: Codable, Sendable, CustomStringConvertible {
             return "{\(pairs)}"
         }
     }
+
+    subscript(key: String) -> JSONValue? {
+        if case .object(let dict) = self { return dict[key] }
+        return nil
+    }
 }

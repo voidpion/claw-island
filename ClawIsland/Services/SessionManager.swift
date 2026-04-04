@@ -71,9 +71,32 @@ final class SessionManager: ObservableObject {
 
     private func handlePreToolUse(_ e: PreToolUseEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        s.status      = .running(toolName: e.toolName)
+        let desc = Self.toolDescription(name: e.toolName, input: e.toolInput)
+        s.status      = .running(toolName: desc)
         s.currentTool = e.toolName
         s.lastActivity = Date()
+    }
+
+    /// Build a single-line tool description: "ToolName: key_param"
+    private static func toolDescription(name: String, input: JSONValue) -> String {
+        let key: String? = {
+            switch name {
+            case "Bash":   return input["command"]?.description
+            case "Read":   return input["file_path"]?.description
+            case "Write":  return input["file_path"]?.description
+            case "Edit":   return input["file_path"]?.description
+            case "Grep":   return input["pattern"]?.description
+            case "Glob":   return input["pattern"]?.description
+            case "Agent":  return input["description"]?.description
+            case "WebFetch", "WebSearch": return input["query"]?.description ?? input["url"]?.description
+            default:       return nil
+            }
+        }()
+        if let key {
+            let truncated = String(key.prefix(80))
+            return "\(name): \(truncated)"
+        }
+        return name
     }
 
     private func handlePostToolUse(_ e: PostToolUseEvent) {
