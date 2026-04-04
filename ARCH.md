@@ -40,3 +40,55 @@ Session 状态只在有意义的语义边界切换，不因实现细节产生无
 
 - `stop`：每次 Claude 回答完成都会触发，不代表会话结束，只改状态为 completed
 - `session_end`：用户退出 claude 进程时触发，5s 后才移除 session 行（让"Done"可读）
+
+## UI 组件词汇表
+
+### 整体结构
+
+```
+┌──────────────────── NotchPill（背景形状）────────────────────┐
+│  NotchPillShape: 上宽下窄药丸                                │
+│  顶部：全宽直边 + 两侧 concave 弧（半径 br）                   │
+│  底部：标准内圆角（半径 br），比顶部窄 2×br                     │
+│  topBleed: 窗口向上超出屏幕 6pt，实现无缝衔接                  │
+│                                                              │
+│  ┌─ compactBar（折叠态，始终可见）────────────────────────┐   │
+│  │ 左翼              │ 中间缺口（硬件刘海） │ 右翼          │   │
+│  │ AgentIcon + dots  │   （无内容）         │ session 计数  │   │
+│  └───────────────────────────────────────────────────────┘   │
+│                                                              │
+│  ┌─ expandedPanel（展开态）──────────────────────────────┐   │
+│  │ divider（0.5pt 横线）                                  │   │
+│  │ ┌─ SessionRowView ──────────────────────────────────┐ │   │
+│  │ │ SessionAvatar │ title         │ modelBadge        │ │   │
+│  │ │ （状态图标）   │ lastUserPrompt│ elapsedTimeBadge  │ │   │
+│  │ │               │ subtitle      │                   │ │   │
+│  │ ├─ ApprovalView（仅 waitingApproval 时出现）────────┤ │   │
+│  │ │ tool_name + tool_input + [Allow] [Deny] [Ignore]  │ │   │
+│  │ └───────────────────────────────────────────────────┘ │   │
+│  └───────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 组件名称对照
+
+| 名称 | 文件 | 说明 |
+|------|------|------|
+| **NotchPill** | NotchContentView | 背景视图，渐变填充 + 边框描边 |
+| **NotchPillShape** | NotchContentView | Shape：上宽下窄药丸，concave 顶角 + convex 底角 |
+| **compactBar** | NotchContentView | 折叠态横条，三段布局：左翼/中间缺口/右翼 |
+| **AgentIcon** | NotchContentView | 左翼最左侧图标（waveform / 盾牌），有 approval 时脉冲橙色光晕 |
+| **StatusDot** | NotchContentView | 左翼小圆点（6pt），每个 session 一个，running 时脉冲 |
+| **expandedPanel** | NotchContentView | 展开面板：divider + ScrollView + SessionRowView 列表 |
+| **SessionRowView** | SessionRowView | 展开态单行：头像 + 三行文字 + 右侧 badge |
+| **SessionAvatar** | SessionRowView | 28×28 圆角方块，状态色边框 + 状态图标 + 脉冲光晕 |
+| **ApprovalView** | ApprovalView | inline 审批面板：工具名 + 输入预览 + Allow/Deny/Ignore 按钮 |
+
+### 两种状态
+
+| | 折叠态（collapsed） | 展开态（expanded） |
+|---|---|---|
+| 宽度 | 2×notchWidth | 520pt |
+| 形状 br | 12 | 20 |
+| 内容 | compactBar only | compactBar + expandedPanel |
+| 触发 | 默认 / 鼠标离开 | 鼠标悬停 / approval 请求 |
