@@ -84,6 +84,40 @@ Session 状态只在有意义的语义边界切换，不因实现细节产生无
 | **SessionAvatar** | SessionRowView | 28×28 圆角方块，状态色边框 + 状态图标 + 脉冲光晕 |
 | **ApprovalView** | ApprovalView | inline 审批面板：工具名 + 输入预览 + Allow/Deny/Ignore 按钮 |
 
+### Session Row 文案显示规则
+
+SessionRowView 在展开态下显示以下内容：
+
+**第一行 — 标题** (`session.title`)
+- 优先级：`customTitle` > 目录名 > shortId
+- `customTitle`：首次 `user_prompt_submit` 时取前 40 字符，冻结不更新
+- 目录名：从 `transcriptPath` 提取最后一层目录名
+- shortId：session ID 前 8 位（兜底）
+
+**第二行 — 最后用户输入** (`session.lastUserPrompt`)
+- 仅当 `lastUserPrompt != nil` 时显示
+- 格式：`You: xxx`（灰色，10.5pt）
+- 来源：`user_prompt_submit` 时取前 60 字符
+
+**第三行 — 状态副标题** (`session.subtitle`)
+
+| 状态 | 显示 | 颜色 |
+|------|------|------|
+| idle | 仅 subagent > 0 时显示 `↳ N subagent(s)` | 灰白 |
+| running(tool) | 工具描述如 `Bash: git status`；有 subagent 追加 `↳ N` | 蓝 |
+| waitingApproval | `Awaiting approval…` | 橙 |
+| notifying(msg) | 通知原文 | 紫 |
+| compacting | `Compacting context…` | 黄 |
+| completed | `Done · 3m` | 绿 |
+| failed | `Failed` | 红 |
+
+**右侧徽章**
+
+| 徽章 | 来源 | 说明 |
+|------|------|------|
+| modelBadge | `session_start` 的 `model` 字段 | Claude Code 不总是发送此字段，可能缺失 |
+| elapsedTimeBadge | `session.startTime` 到现在的时长 | 格式：`<1m` / `3m` / `1h`，始终显示 |
+
 ### 两种状态
 
 | | 折叠态（collapsed） | 展开态（expanded） |

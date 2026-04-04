@@ -10,14 +10,11 @@ struct SessionRowView: View {
             mainRow
                 .padding(.vertical, 8)
                 .padding(.horizontal, 10)
-                .background(rowBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .onHover { hovered = $0 }
 
-            // Inline approval panel slides in below the row
+            // Inline approval panel — inside the same card
             if case .waitingApproval(let event) = session.status {
+                Divider().overlay(Color.white.opacity(0.06)).padding(.horizontal, 10)
                 ApprovalView(event: event, session: session)
-                    .padding(.top, 3)
                     .transition(
                         .asymmetric(
                             insertion: .push(from: .top).combined(with: .opacity),
@@ -26,6 +23,9 @@ struct SessionRowView: View {
                     )
             }
         }
+        .background(rowBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .onHover { hovered = $0 }
         .animation(.spring(response: 0.32, dampingFraction: 0.76), value: isWaiting)
     }
 

@@ -49,8 +49,12 @@ guard connectResult == 0 else {
 // 3. Send length-prefixed payload
 guard sendData(sock: sock, data: inputData) else { close(sock); exit(0) }
 
-// 4. For PermissionRequest: wait for decision
-if eventName == "PermissionRequest" {
+// 4. For PermissionRequest / permission_prompt Notification: wait for decision
+let isPermissionEvent = eventName == "PermissionRequest"
+    || (eventName == "Notification"
+        && (json["notification_type"] as? String) == "permission_prompt")
+
+if isPermissionEvent {
     if let responseData = receiveData(sock: sock),
        let response = try? JSONDecoder().decode(BridgeResponse.self, from: responseData) {
         close(sock)

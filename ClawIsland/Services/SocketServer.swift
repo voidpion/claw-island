@@ -106,8 +106,17 @@ final class SocketServer: @unchecked Sendable {
         let response = await handler(event)
         log("handler returned, response=\(response != nil ? "yes" : "nil")")
 
-        // Only PermissionRequest waits for a response
-        if case .permissionRequest = event, let response,
+        // PermissionRequest and permission_prompt Notification both wait for a response
+        let needsResponse: Bool
+        if case .permissionRequest = event {
+            needsResponse = true
+        } else if case .notification(let n) = event, n.notificationType == "permission_prompt" {
+            needsResponse = true
+        } else {
+            needsResponse = false
+        }
+
+        if needsResponse, let response,
            let bytes = try? JSONEncoder().encode(response) {
             writeLengthPrefixed(fd: fd, data: bytes)
         }
