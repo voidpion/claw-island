@@ -23,6 +23,7 @@ final class Session: ObservableObject, Identifiable {
     @Published var subagentCount: Int = 0
     @Published var startTime: Date = Date()
     @Published var lastActivity: Date = Date()
+    @Published var cwd: String?
 
     var pendingApprovalContinuation: CheckedContinuation<HookResponse, Never>?
 
@@ -33,6 +34,7 @@ final class Session: ObservableObject, Identifiable {
 
     var title: String {
         if let t = customTitle, !t.isEmpty { return t }
+        if let cwd { return URL(fileURLWithPath: cwd).lastPathComponent }
         guard let tp = transcriptPath else { return shortId }
         let dirName = URL(fileURLWithPath: tp).deletingLastPathComponent().lastPathComponent
         if dirName.hasPrefix("-") {

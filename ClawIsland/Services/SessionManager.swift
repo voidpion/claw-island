@@ -16,6 +16,7 @@ final class SessionManager: ObservableObject {
             guard let self else { return nil }
             return await self.handle(event: event)
         }
+        recoverExistingSessions()
     }
 
     // MARK: - Event routing
@@ -63,9 +64,16 @@ final class SessionManager: ObservableObject {
         }
         // Read initial title & model from transcript JSONL
         if let path = e.transcriptPath {
-            let info = Self.parseTranscriptHeader(path: path)
+            let info = Self.parseTranscript(path: path)
             if let t = info.title, s.customTitle == nil { s.customTitle = t }
             if let m = info.model, s.model == nil { s.model = m }
+            // Derive cwd from transcript path
+            if s.cwd == nil {
+                let dirName = URL(fileURLWithPath: path).deletingLastPathComponent().lastPathComponent
+                if dirName.hasPrefix("-") {
+                    s.cwd = String(dirName.dropFirst()).replacingOccurrences(of: "-", with: "/")
+                }
+            }
         }
     }
 
@@ -97,15 +105,16 @@ final class SessionManager: ObservableObject {
 
     private func handlePreToolUse(_ e: PreToolUseEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        let desc = Self.toolDescription(name: e.toolName, input: e.toolInput)
+        let desc = Self.toolDescription(name: e.toolName, input: e.toolInput, cwd: s.cwd)
         s.status      = .running(toolName: desc)
         s.currentTool = e.toolName
         s.lastActivity = Date()
     }
 
     /// Build a single-line tool description: "ToolName: key_param"
-    private static func toolDescription(name: String, input: JSONValue) -> String {
-        let key: String? = {
+    /// Strips cwd prefix from file paths for cleaner display.
+    private static func toolDescription(name: String, input: JSONValue, cwd: String?) -> String {
+        let raw: String? = {
             switch name {
             case "Bash":   return input["command"]?.description
             case "Read":   return input["file_path"]?.description
@@ -118,11 +127,13 @@ final class SessionManager: ObservableObject {
             default:       return nil
             }
         }()
-        if let key {
-            let truncated = String(key.prefix(80))
-            return "\(name): \(truncated)"
+        guard let raw else { return name }
+        var display = raw
+        if let cwd, display.hasPrefix(cwd + "/") {
+            display = String(display.dropFirst(cwd.count + 1))
         }
-        return name
+        let truncated = String(display.prefix(80))
+        return "\(name): \(truncated)"
     }
 
     private func handlePostToolUse(_ e: PostToolUseEvent) {
@@ -228,6 +239,61 @@ final class SessionManager: ObservableObject {
         session.status = .idle
     }
 
+    // MARK: - Startup recovery
+
+    /// Scan ~/.claude/sessions/ for already-running Claude Code processes
+    /// and create placeholder sessions so they appear in the notch UI immediately.
+    private func recoverExistingSessions() {
+        let sessionsDir = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/sessions")
+        guard let files = try? FileManager.default.contentsOfDirectory(
+            at: sessionsDir, includingPropertiesForKeys: nil
+        ) else { return }
+
+        for fileURL in files {
+            guard fileURL.pathExtension == "json",
+                  let data = try? Data(contentsOf: fileURL),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let pid = obj["pid"] as? Int,
+                  let sessionId = obj["sessionId"] as? String,
+                  let cwd = obj["cwd"] as? String
+            else { continue }
+
+            // Skip non-CLI sessions (e.g. Xcode sdk-ts integration)
+            if (obj["entrypoint"] as? String) == "sdk-ts" { continue }
+
+            // Check if process is still alive
+            guard kill(pid_t(pid), 0) == 0 else { continue }
+
+            // Skip if we already have this session (from hooks)
+            if sessions.contains(where: { $0.id == sessionId }) { continue }
+
+            // Derive transcriptPath from cwd: "/Users/zhangjin/..." → "-Users-zhangjin-..."
+            let projectDir = "-" + cwd.dropFirst().replacingOccurrences(of: "/", with: "-")
+            let transcriptPath = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent(".claude/projects/\(projectDir)/\(sessionId).jsonl")
+                .path
+
+            let s = findOrCreate(id: sessionId, transcriptPath: transcriptPath)
+            s.status = .idle
+            s.lastActivity = Date()
+            s.cwd = cwd
+
+            // Set startTime from startedAt (epoch ms)
+            if let startedAt = obj["startedAt"] as? TimeInterval {
+                s.startTime = Date(timeIntervalSince1970: startedAt / 1000)
+            }
+
+            // Extract title, model & last prompt from transcript
+            let info = Self.parseTranscript(path: transcriptPath)
+            if let t = info.title { s.customTitle = t }
+            if let m = info.model { s.model = m }
+            if let p = info.lastUserPrompt { s.lastUserPrompt = p }
+
+            debugLog("recovered session \(sessionId.prefix(8)) cwd=\(cwd)")
+        }
+    }
+
     // MARK: - Helpers
 
     private func findOrCreate(id: String, transcriptPath: String?) -> Session {
@@ -281,48 +347,73 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Transcript parsing
 
-    /// Quick scan of transcript JSONL for first user message and last known model.
-    /// Only reads enough to find what we need — stops early when possible.
-    private static func parseTranscriptHeader(path: String) -> (title: String?, model: String?) {
+    struct TranscriptInfo {
+        var title: String?           // first real user message (≤40 chars)
+        var model: String?           // last non-synthetic model name
+        var lastUserPrompt: String?  // last real user message (≤60 chars)
+    }
+
+    /// Scan transcript JSONL: forward for first user message, backward for last model + last user message.
+    private static func parseTranscript(path: String) -> TranscriptInfo {
         guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
-            return (nil, nil)
+            return TranscriptInfo()
         }
+
+        let allLines = data.split(separator: 0x0A, omittingEmptySubsequences: true)
 
         var firstUserContent: String?
         var lastModel: String?
+        var lastUserPrompt: String?
 
-        // Split by newlines and scan up to ~200 lines
-        let lines = data.split(separator: 0x0A, maxSplits: 200, omittingEmptySubsequences: true)
-        for line in lines {
+        // Forward pass: find first user message
+        for line in allLines {
             guard let obj = try? JSONSerialization.jsonObject(with: line) as? [String: Any]
             else { continue }
-
-            let type = obj["type"] as? String
-
-            // Extract first real user message
-            if type == "user", firstUserContent == nil,
-               let message = obj["message"] as? [String: Any] {
-                if let content = message["content"] as? String, !content.hasPrefix("<") {
-                    firstUserContent = String(content.prefix(40))
-                } else if let content = message["content"] as? [[String: Any]] {
-                    for item in content {
-                        guard item["type"] as? String == "text",
-                              let text = item["text"] as? String,
-                              !text.hasPrefix("<") else { continue }
-                        firstUserContent = String(text.prefix(40))
-                        break
-                    }
-                }
-            }
-
-            // Track last model from assistant messages
-            if type == "assistant", let message = obj["message"] as? [String: Any],
-               let model = message["model"] as? String, model != "<synthetic>" {
-                lastModel = Self.shortModelName(model)
+            if obj["type"] as? String == "user",
+               let text = Self.extractUserText(obj) {
+                firstUserContent = String(text.prefix(40))
+                break
             }
         }
 
-        return (title: firstUserContent, model: lastModel)
+        // Reverse pass: find last model + last user message
+        for line in allLines.reversed() {
+            guard let obj = try? JSONSerialization.jsonObject(with: line) as? [String: Any]
+            else { continue }
+            let type = obj["type"] as? String
+
+            if type == "assistant", lastModel == nil,
+               let message = obj["message"] as? [String: Any],
+               let model = message["model"] as? String, model != "<synthetic>" {
+                lastModel = Self.shortModelName(model)
+            }
+
+            if type == "user", lastUserPrompt == nil,
+               let text = Self.extractUserText(obj) {
+                lastUserPrompt = String(text.prefix(60))
+            }
+
+            if lastModel != nil && lastUserPrompt != nil { break }
+        }
+
+        return TranscriptInfo(title: firstUserContent, model: lastModel, lastUserPrompt: lastUserPrompt)
+    }
+
+    /// Extract real user text from a user-type JSONL entry, skipping meta/system messages.
+    private static func extractUserText(_ obj: [String: Any]) -> String? {
+        guard let message = obj["message"] as? [String: Any] else { return nil }
+        if let content = message["content"] as? String, !content.hasPrefix("<") {
+            return content
+        }
+        if let content = message["content"] as? [[String: Any]] {
+            for item in content {
+                guard item["type"] as? String == "text",
+                      let text = item["text"] as? String,
+                      !text.hasPrefix("<") else { continue }
+                return text
+            }
+        }
+        return nil
     }
 
     /// Shorten model IDs for display: "claude-sonnet-4-6" → "sonnet-4.6", "glm-5.1" → "glm-5.1"

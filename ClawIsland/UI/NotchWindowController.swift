@@ -202,7 +202,7 @@ final class NotchWindowController: NSWindowController {
         }
         debugLog("updateVisibility hasSessions=\(hasSessions) isVisible=\(window.isVisible) alpha=\(window.alphaValue)")
         if hasSessions {
-            guard !window.isVisible else {
+            guard !window.isVisible || window.alphaValue == 0 else {
                 debugLog("updateVisibility: already visible, skip")
                 return
             }
