@@ -26,7 +26,11 @@ final class SessionManager: ObservableObject {
         case .permissionRequest(let e): return await handlePermissionRequest(e)
         case .preToolUse(let e):        handlePreToolUse(e)
         case .postToolUse(let e):       handlePostToolUse(e)
-        case .notification(let e):      handleNotification(e)
+        case .notification(let e):
+            if e.notificationType == "permission_prompt" {
+                return await handleNotificationPermissionPrompt(e)
+            }
+            handleNotification(e)
         case .stop(let e):              handleStop(e)
         case .sessionEnd(let e):        handleSessionEnd(e)
         case .userPromptSubmit(let e):  handleUserPromptSubmit(e)
@@ -57,11 +61,33 @@ final class SessionManager: ObservableObject {
             s.customTitle = nil
             s.subagentCount = 0
         }
+        // Read initial title & model from transcript JSONL
+        if let path = e.transcriptPath {
+            let info = Self.parseTranscriptHeader(path: path)
+            if let t = info.title, s.customTitle == nil { s.customTitle = t }
+            if let m = info.model, s.model == nil { s.model = m }
+        }
     }
 
     private func handlePermissionRequest(_ e: PermissionRequestEvent) async -> HookResponse {
-        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        let s = findOrNearest(id: e.sessionId, transcriptPath: e.transcriptPath)
         s.status = .waitingApproval(e)
+        s.lastActivity = Date()
+        onAutoExpand?()
+        return await withCheckedContinuation { continuation in
+            s.pendingApprovalContinuation = continuation
+        }
+    }
+
+    private func handleNotificationPermissionPrompt(_ e: NotificationEvent) async -> HookResponse {
+        let s = findOrNearest(id: e.sessionId, transcriptPath: e.transcriptPath)
+        let fakeEvent = PermissionRequestEvent(
+            sessionId: e.sessionId,
+            transcriptPath: e.transcriptPath,
+            toolName: "Permission",
+            toolInput: .string(e.message)
+        )
+        s.status = .waitingApproval(fakeEvent)
         s.lastActivity = Date()
         onAutoExpand?()
         return await withCheckedContinuation { continuation in
@@ -212,6 +238,20 @@ final class SessionManager: ObservableObject {
         return s
     }
 
+    /// Like findOrCreate, but for events that should NOT spawn a new row
+    /// (e.g., permission requests from sub-agents). Falls back to the
+    /// most-recently-active session if the exact ID isn't found.
+    private func findOrNearest(id: String, transcriptPath: String?) -> Session {
+        if let existing = sessions.first(where: { $0.id == id }) { return existing }
+        // No exact match — attach to the most recently active session
+        if let nearest = sessions.max(by: { $0.lastActivity < $1.lastActivity }) {
+            debugLog("findOrNearest: no match for \(id), attaching to \(nearest.id)")
+            return nearest
+        }
+        // No sessions at all — create one as last resort
+        return findOrCreate(id: id, transcriptPath: transcriptPath)
+    }
+
     private func debugLog(_ msg: String) {
         let line = "\(Date()) [SM] \(msg)\n"
         if let data = line.data(using: .utf8) {
@@ -237,5 +277,65 @@ final class SessionManager: ObservableObject {
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: id, content: content, trigger: nil)
         )
+    }
+
+    // MARK: - Transcript parsing
+
+    /// Quick scan of transcript JSONL for first user message and last known model.
+    /// Only reads enough to find what we need — stops early when possible.
+    private static func parseTranscriptHeader(path: String) -> (title: String?, model: String?) {
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+            return (nil, nil)
+        }
+
+        var firstUserContent: String?
+        var lastModel: String?
+
+        // Split by newlines and scan up to ~200 lines
+        let lines = data.split(separator: 0x0A, maxSplits: 200, omittingEmptySubsequences: true)
+        for line in lines {
+            guard let obj = try? JSONSerialization.jsonObject(with: line) as? [String: Any]
+            else { continue }
+
+            let type = obj["type"] as? String
+
+            // Extract first real user message
+            if type == "user", firstUserContent == nil,
+               let message = obj["message"] as? [String: Any] {
+                if let content = message["content"] as? String, !content.hasPrefix("<") {
+                    firstUserContent = String(content.prefix(40))
+                } else if let content = message["content"] as? [[String: Any]] {
+                    for item in content {
+                        guard item["type"] as? String == "text",
+                              let text = item["text"] as? String,
+                              !text.hasPrefix("<") else { continue }
+                        firstUserContent = String(text.prefix(40))
+                        break
+                    }
+                }
+            }
+
+            // Track last model from assistant messages
+            if type == "assistant", let message = obj["message"] as? [String: Any],
+               let model = message["model"] as? String, model != "<synthetic>" {
+                lastModel = Self.shortModelName(model)
+            }
+        }
+
+        return (title: firstUserContent, model: lastModel)
+    }
+
+    /// Shorten model IDs for display: "claude-sonnet-4-6" → "sonnet-4.6", "glm-5.1" → "glm-5.1"
+    private static func shortModelName(_ raw: String) -> String {
+        if raw.hasPrefix("claude-") {
+            let rest = String(raw.dropFirst(7)) // drop "claude-"
+            let parts = rest.components(separatedBy: "-")
+            if parts.count >= 2 {
+                let family = parts[0] // sonnet, opus, haiku
+                let version = parts[1...].joined(separator: ".")
+                return "\(family)-\(version)"
+            }
+        }
+        return raw
     }
 }

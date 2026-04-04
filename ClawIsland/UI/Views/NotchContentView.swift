@@ -54,9 +54,9 @@ struct NotchContentView: View {
     // Layout: [left: icon + dots] [center gap = notch] [right: message + count]
 
     private var compactBar: some View {
-        let edgePad: CGFloat = viewModel.expanded ? 24 : 28
+        let edgePad: CGFloat = viewModel.expanded ? 24 : 14
         return HStack(spacing: 0) {
-            // Left wing
+            // Left wing — shrink to content
             HStack(spacing: 6) {
                 AgentIcon(hasApproval: hasApprovalPending,
                           hasSessions: !sessionManager.sessions.isEmpty)
@@ -65,28 +65,36 @@ struct NotchContentView: View {
                         StatusDot(session: s)
                     }
                 }
-                Spacer(minLength: 0)
             }
             .padding(.leading, edgePad)
-            .frame(maxWidth: .infinity)
 
             // Center gap — the hardware notch lives here, no content
             if viewModel.notchWidth > 0 {
-                Spacer().frame(width: viewModel.notchWidth)
+                Spacer(minLength: 0).frame(width: viewModel.notchWidth)
             }
 
-            // Right wing
-            HStack(spacing: 6) {
-                Spacer(minLength: 0)
-                let count = sessionManager.sessions.count
-                if count > 0 {
-                    Text("\(count) session\(count == 1 ? "" : "s")")
-                        .font(.system(size: 10, weight: .regular, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.35))
-                }
+            Spacer(minLength: 4)
+
+            // Right wing — shrink to content
+            let count = sessionManager.sessions.count
+            (Text("\(count) ")
+                .foregroundStyle(.white.opacity(0.55))
+            + Text("session\(count == 1 ? "" : "s")")
+                .foregroundStyle(.white.opacity(0.25)))
+                .font(.system(size: 10, weight: .regular, design: .monospaced))
+                .padding(.trailing, edgePad)
+        }
+        // Measure collapsed content width and report to controller
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: CollapsedWidthKey.self,
+                    value: geo.size.width
+                )
             }
-            .padding(.trailing, edgePad)
-            .frame(maxWidth: .infinity)
+        )
+        .onPreferenceChange(CollapsedWidthKey.self) { w in
+            viewModel.collapsedContentWidth = w
         }
     }
 
@@ -132,6 +140,13 @@ struct NotchContentView: View {
 // MARK: - Preference key
 
 private struct ContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct CollapsedWidthKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
         value = max(value, nextValue())

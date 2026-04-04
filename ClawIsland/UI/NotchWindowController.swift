@@ -9,6 +9,7 @@ final class NotchViewModel: ObservableObject {
     @Published var contentHeight: CGFloat = 0   // measured by SwiftUI, 0 = unknown yet
     @Published var collapsedHeight: CGFloat = 32 // real notch height; updated from safeAreaInsets
     @Published var notchWidth: CGFloat = 0       // hardware notch width; 0 on non-notch screens
+    @Published var collapsedContentWidth: CGFloat = 220  // measured by SwiftUI, auto-sized
 }
 
 @MainActor
@@ -83,6 +84,14 @@ final class NotchWindowController: NSWindowController {
         viewModel.$contentHeight
             .receive(on: RunLoop.main)
             .filter { [weak self] _ in self?.viewModel.expanded == true }
+            .removeDuplicates()
+            .sink { [weak self] _ in self?.positionOnNotch(animated: true) }
+            .store(in: &cancellables)
+
+        // Reposition when collapsed content width changes
+        viewModel.$collapsedContentWidth
+            .receive(on: RunLoop.main)
+            .filter { [weak self] _ in self?.viewModel.expanded == false }
             .removeDuplicates()
             .sink { [weak self] _ in self?.positionOnNotch(animated: true) }
             .store(in: &cancellables)
@@ -224,7 +233,11 @@ final class NotchWindowController: NSWindowController {
         let sf = screen.frame
         let expanded = viewModel.expanded
 
-        let collapsedW = viewModel.notchWidth > 0 ? viewModel.notchWidth * 2 : Self.collapsedWidth
+        let collapsedW: CGFloat = {
+            let measured = viewModel.collapsedContentWidth
+            let notch = viewModel.notchWidth > 0 ? viewModel.notchWidth : 0
+            return measured > 0 ? max(measured, notch + 40) : (notch > 0 ? notch * 2 : Self.collapsedWidth)
+        }()
         let w = expanded ? Self.expandedWidth : collapsedW
         let measured = viewModel.contentHeight
         let h: CGFloat = expanded
