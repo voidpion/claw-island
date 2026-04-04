@@ -11,13 +11,22 @@ struct NotchContentView: View {
         }
     }
 
+    /// The shape's body is inset by `br` on each side from the window edge.
+    /// Content must use at least this much horizontal padding to stay inside the body.
+    private var bodyRadius: CGFloat { viewModel.expanded ? 20 : 12 }
+
+    /// Horizontal inset for expanded body content (rows, dividers).
+    /// Must be > bodyRadius so rows stay clearly inside the shape body with breathing room.
+    private var expandedBodyInset: CGFloat { bodyRadius + 6 }
+
     var body: some View {
         ZStack(alignment: .top) {
             NotchPill(expanded: viewModel.expanded)
 
             VStack(spacing: 0) {
                 compactBar
-                    .frame(height: viewModel.collapsedHeight)
+                    .frame(height: viewModel.collapsedHeight + 6, alignment: .center)
+                    .clipped()
 
                 if viewModel.expanded {
                     expandedPanel
@@ -45,7 +54,8 @@ struct NotchContentView: View {
     // Layout: [left: icon + dots] [center gap = notch] [right: message + count]
 
     private var compactBar: some View {
-        HStack(spacing: 0) {
+        let edgePad: CGFloat = viewModel.expanded ? 24 : 28
+        return HStack(spacing: 0) {
             // Left wing
             HStack(spacing: 6) {
                 AgentIcon(hasApproval: hasApprovalPending,
@@ -57,7 +67,7 @@ struct NotchContentView: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.leading, 14)
+            .padding(.leading, edgePad)
             .frame(maxWidth: .infinity)
 
             // Center gap — the hardware notch lives here, no content
@@ -68,30 +78,16 @@ struct NotchContentView: View {
             // Right wing
             HStack(spacing: 6) {
                 Spacer(minLength: 0)
-                if let msg = featuredCompactMessage {
-                    Text(msg)
-                        .font(.system(size: 10, weight: .regular, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.45))
-                        .lineLimit(1)
-                        .transition(.opacity)
-                        .animation(.easeOut(duration: 0.2), value: msg)
-                }
                 let count = sessionManager.sessions.count
                 if count > 0 {
-                    Text(count == 1 ? "1 session" : "\(count) sessions")
-                        .font(.system(size: 10, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.25))
+                    Text("\(count) session\(count == 1 ? "" : "s")")
+                        .font(.system(size: 10, weight: .regular, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.35))
                 }
             }
-            .padding(.trailing, 14)
+            .padding(.trailing, edgePad)
             .frame(maxWidth: .infinity)
         }
-    }
-
-    private var featuredCompactMessage: String? {
-        sessionManager.sessions
-            .max(by: { $0.statusPriority < $1.statusPriority })
-            .flatMap { $0.compactMessage }
     }
 
     // MARK: - Expanded panel
@@ -101,7 +97,7 @@ struct NotchContentView: View {
             Rectangle()
                 .fill(Color.white.opacity(0.07))
                 .frame(height: 0.5)
-                .padding(.horizontal, 16)
+                .padding(.horizontal, expandedBodyInset)
 
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 1) {
@@ -111,7 +107,7 @@ struct NotchContentView: View {
                     }
                 }
                 .padding(.vertical, 10)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, expandedBodyInset)
                 // Measure natural content height and report to controller
                 .background(
                     GeometryReader { geo in
@@ -147,17 +143,16 @@ private struct ContentHeightKey: PreferenceKey {
 private struct NotchPill: View {
     let expanded: Bool
     private var bottomRadius: CGFloat { expanded ? 20 : 12 }
-    private let outerRadius: CGFloat = 18  // top outer (concave) corners
 
     var body: some View {
         GeometryReader { geo in
-            NotchPillShape(bottomRadius: bottomRadius, outerTopRadius: outerRadius)
+            NotchPillShape(bottomRadius: bottomRadius)
                 .fill(LinearGradient(
                     colors: [Color(white: 0.11), Color(white: 0.04)],
                     startPoint: .top, endPoint: .bottom
                 ))
                 .overlay(
-                    NotchPillShape(bottomRadius: bottomRadius, outerTopRadius: outerRadius)
+                    NotchPillShape(bottomRadius: bottomRadius)
                         .strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5)
                 )
                 .frame(width: geo.size.width, height: geo.size.height)
@@ -166,14 +161,13 @@ private struct NotchPill: View {
 }
 
 // MARK: - Notch pill shape
-// Top corners: outer/concave (arc center at corner point, curves outward into notch hardware).
-// Bottom corners: inner/convex standard rounded corners.
-// The outer top arcs extend above y=0 — the window clips them at the screen edge,
-// creating a seamless "pulled down from notch" effect on notch Macs.
+// Top edge = full width (widest).
+// Top corners: concave quadratic bezier — same radius `br` as bottom corners.
+// Bottom corners: standard inner rounded corners (convex, radius `br`).
+// Top and bottom use identical `br` so the curves are visual mirrors.
 
 private struct NotchPillShape: Shape & InsettableShape {
     var bottomRadius: CGFloat
-    var outerTopRadius: CGFloat
     var insetAmount: CGFloat = 0
 
     func inset(by amount: CGFloat) -> NotchPillShape {
@@ -185,39 +179,43 @@ private struct NotchPillShape: Shape & InsettableShape {
         let w = r.width, h = r.height
         let x = r.minX, y = r.minY
         let br = min(bottomRadius - insetAmount, min(w, h) / 2)
-        let or = max(outerTopRadius + insetAmount, 0)
 
         var p = Path()
-        // Top edge (between the two outer corner tangent points)
-        p.move(to: CGPoint(x: x + or, y: y))
-        p.addLine(to: CGPoint(x: x + w - or, y: y))
 
-        // Top-right outer corner: center at (x+w, y), 270° CW-on-screen arc flaring outward
-        p.addArc(center: CGPoint(x: x + w, y: y),
-                 radius: or,
-                 startAngle: .degrees(180), endAngle: .degrees(90),
-                 clockwise: false)
+        // Start at top-left corner
+        p.move(to: CGPoint(x: x, y: y))
 
-        // Right edge → bottom-right inner corner
-        p.addLine(to: CGPoint(x: x + w, y: y + h - br))
-        p.addArc(center: CGPoint(x: x + w - br, y: y + h - br),
+        // Top edge — full width
+        p.addLine(to: CGPoint(x: x + w, y: y))
+
+        // Top-right concave: (x+w, y) → (x+w-br, y+br), control (x+w-br, y)
+        p.addQuadCurve(
+            to:      CGPoint(x: x + w - br, y: y + br),
+            control: CGPoint(x: x + w - br, y: y)
+        )
+
+        // Right body edge → bottom-right inner corner
+        p.addLine(to: CGPoint(x: x + w - br, y: y + h - br))
+        p.addArc(center: CGPoint(x: x + w - 2 * br, y: y + h - br),
                  radius: br,
                  startAngle: .degrees(0), endAngle: .degrees(90),
                  clockwise: false)
 
         // Bottom edge → bottom-left inner corner
-        p.addLine(to: CGPoint(x: x + br, y: y + h))
-        p.addArc(center: CGPoint(x: x + br, y: y + h - br),
+        p.addLine(to: CGPoint(x: x + 2 * br, y: y + h))
+        p.addArc(center: CGPoint(x: x + 2 * br, y: y + h - br),
                  radius: br,
                  startAngle: .degrees(90), endAngle: .degrees(180),
                  clockwise: false)
 
-        // Left edge → top-left outer corner: center at (x, y), 270° CW-on-screen arc flaring outward
-        p.addLine(to: CGPoint(x: x, y: y + or))
-        p.addArc(center: CGPoint(x: x, y: y),
-                 radius: or,
-                 startAngle: .degrees(90), endAngle: .degrees(0),
-                 clockwise: false)
+        // Left body edge up to the concave curve start
+        p.addLine(to: CGPoint(x: x + br, y: y + br))
+
+        // Top-left concave: (x+br, y+br) → (x, y), control (x+br, y)
+        p.addQuadCurve(
+            to:      CGPoint(x: x, y: y),
+            control: CGPoint(x: x + br, y: y)
+        )
 
         p.closeSubpath()
         return p
@@ -264,11 +262,11 @@ struct StatusDot: View {
     private var dotColor: Color {
         switch session.status {
         case .idle:            return .white.opacity(0.28)
-        case .running:         return Color(red: 0.2, green: 0.9, blue: 0.5)
+        case .running:         return Color(red: 0.35, green: 0.6, blue: 1.0)
         case .waitingApproval: return .orange
         case .notifying:       return Color(red: 0.7, green: 0.4, blue: 1.0)
         case .compacting:      return Color(red: 0.9, green: 0.8, blue: 0.2)
-        case .completed:       return Color(red: 0.35, green: 0.6, blue: 1.0)
+        case .completed:       return Color(red: 0.2, green: 0.9, blue: 0.5)
         case .failed:          return Color(red: 1.0, green: 0.35, blue: 0.35)
         }
     }

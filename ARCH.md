@@ -11,13 +11,13 @@ Session 状态只在有意义的语义边界切换，不因实现细节产生无
 | Hook 事件 | → 状态 | 颜色 | 含义 |
 |-----------|--------|------|------|
 | `session_start` | `.idle` | 灰白 | 刚连接，等待输入 |
-| `user_prompt_submit` | `.running("thinking")` | 绿 | 收到消息，正在思考 |
-| `pre_tool_use` | `.running(toolName)` | 绿 | 调用具体工具 |
-| `post_tool_use` | 不变（保持 running） | 绿 | 工具返回，等下一步 |
+| `user_prompt_submit` | `.running("thinking")` | 蓝 | 收到消息，正在思考 |
+| `pre_tool_use` | `.running(toolName)` | 蓝 | 调用具体工具 |
+| `post_tool_use` | 不变（保持 running） | 蓝 | 工具返回，等下一步 |
 | `pre_compact` | `.compacting` | 黄 | 压缩上下文 |
 | `permission_request` | `.waitingApproval` | 橙 | 等待用户授权 |
 | `notification` | `.notifying` | 紫 | Claude 主动通知 |
-| `stop` | `.completed` | 蓝 | 本轮回答完成 |
+| `stop` | `.completed` | 绿 | 本轮回答完成 |
 | `session_end` | 5s 后移除行 | — | 进程退出 |
 | `subagent_start/stop` | 不改状态，只改计数 | — | 子 agent |
 
