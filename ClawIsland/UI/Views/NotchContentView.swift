@@ -106,12 +106,9 @@ struct NotchContentView: View {
     // MARK: - Expanded panel
 
     private var expandedPanel: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(Color.white.opacity(0.07))
-                .frame(height: 0.5)
-                .padding(.horizontal, expandedBodyInset)
-
+        let topPad: CGFloat = 10
+        let botPad: CGFloat = 6   // 底角 br=16 视觉上已有空间感，少留一点
+        return VStack(spacing: 0) {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 1) {
                     ForEach(sessionManager.sessions) { session in
@@ -119,16 +116,16 @@ struct NotchContentView: View {
                             .environmentObject(sessionManager)
                     }
                 }
-                .padding(.vertical, 10)
+                .padding(.top, topPad)
+                .padding(.bottom, botPad)
                 .padding(.horizontal, expandedBodyInset)
-                // Measure natural content height and report to controller
                 .background(
                     GeometryReader { geo in
                         Color.clear.preference(
                             key: ContentHeightKey.self,
                             value: geo.size.height
-                                + 20                                           // vertical padding
-                                + viewModel.collapsedHeight                    // compact bar
+                                + topPad + botPad
+                                + viewModel.collapsedHeight
                         )
                     }
                 )
