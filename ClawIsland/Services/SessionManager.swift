@@ -48,16 +48,18 @@ final class SessionManager: ObservableObject {
     private func handleSessionStart(_ e: SessionStartEvent) {
         debugLog("handleSessionStart id=\(e.sessionId) sessions.count=\(sessions.count)")
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
-        s.status = .idle
-        s.currentTool = nil
         s.lastActivity = Date()
         if let model = e.model { s.model = model }
-        // compact / resume: session continues — preserve title and start time.
+        // compact / resume: session continues — preserve title, start time, and status.
         // startup / clear / unknown: fresh session, fully reset.
         let isContinuation = e.source == "compact" || e.source == "resume"
         if isContinuation {
             s.subagentCount = 0
+            // Keep current status (e.g. .compacting → stays until next event updates it)
+            // rather than flashing back to idle mid-conversation.
         } else {
+            s.status = .idle
+            s.currentTool = nil
             s.startTime = Date()
             s.customTitle = nil
             s.subagentCount = 0
