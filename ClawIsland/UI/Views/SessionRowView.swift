@@ -161,14 +161,8 @@ private struct SessionAvatar: View {
                               isActive: isActive)
         }
         .frame(width: 34, height: 34)
-        .onAppear {
-            guard isActive else { return }
-            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
-                pulse = true
-            }
-        }
-        .onChange(of: isActive) { _, active in
-            if active {
+        .task(id: isActive) {
+            if isActive {
                 withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
                     pulse = true
                 }

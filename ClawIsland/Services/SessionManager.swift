@@ -50,6 +50,7 @@ final class SessionManager: ObservableObject {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
         s.lastActivity = Date()
         if let model = e.model { s.model = model }
+        if let cwd = e.cwd { s.cwd = cwd }
         // compact / resume: session continues — preserve title, start time, and status.
         // startup / clear / unknown: fresh session, fully reset.
         let isContinuation = e.source == "compact" || e.source == "resume"
@@ -69,11 +70,11 @@ final class SessionManager: ObservableObject {
             let info = Self.parseTranscript(path: path)
             if let t = info.title, s.customTitle == nil { s.customTitle = t }
             if let m = info.model, s.model == nil { s.model = m }
-            // Derive cwd from transcript path
+            // Derive cwd from transcript path as fallback (event cwd preferred)
             if s.cwd == nil {
                 let dirName = URL(fileURLWithPath: path).deletingLastPathComponent().lastPathComponent
                 if dirName.hasPrefix("-") {
-                    s.cwd = String(dirName.dropFirst()).replacingOccurrences(of: "-", with: "/")
+                    s.cwd = "/" + String(dirName.dropFirst()).replacingOccurrences(of: "-", with: "/")
                 }
             }
         }
