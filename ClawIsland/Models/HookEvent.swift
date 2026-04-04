@@ -193,6 +193,7 @@ struct SessionStartEvent: Codable, Sendable {
     let source: String?   // "startup" | "resume" | "clear" | "compact"
     let model: String?
     let cwd: String?
+    let tty: String?      // injected by ClawBridge: e.g. "/dev/ttys003"
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -200,6 +201,7 @@ struct SessionStartEvent: Codable, Sendable {
         case source
         case model
         case cwd
+        case tty
     }
 }
 

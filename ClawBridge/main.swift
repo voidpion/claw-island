@@ -9,19 +9,25 @@ import Foundation
 
 let socketPath = "/tmp/claw-island.sock"
 
-// 1. Read all stdin
-var inputData = Data()
-let stdin = FileHandle.standardInput
-while true {
-    let chunk = stdin.availableData
-    if chunk.isEmpty { break }
-    inputData.append(chunk)
-}
+// 1. Read all stdin (readDataToEndOfFile blocks until EOF — correct for a hook pipe)
+var inputData = FileHandle.standardInput.readDataToEndOfFile()
 
 guard !inputData.isEmpty,
-      let json = try? JSONSerialization.jsonObject(with: inputData) as? [String: Any],
+      var json = try? JSONSerialization.jsonObject(with: inputData) as? [String: Any],
       let eventName = json["hook_event_name"] as? String
 else { exit(0) }
+
+// Inject tty via sysctl kp_eproc.e_tdev — works even when all stdio fds are redirected by Claude Code.
+var kinfo = kinfo_proc()
+var kinfoSize = MemoryLayout<kinfo_proc>.size
+var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+if sysctl(&mib, 4, &kinfo, &kinfoSize, nil, 0) == 0 {
+    let dev = kinfo.kp_eproc.e_tdev   // dev_t of controlling terminal
+    if dev != 0 && dev != -1, let ptr = devname(dev, S_IFCHR) {
+        json["tty"] = "/dev/" + String(cString: ptr)
+    }
+}
+if let modified = try? JSONSerialization.data(withJSONObject: json) { inputData = modified }
 
 // 2. Connect to ClawIsland socket
 let sock = socket(AF_UNIX, SOCK_STREAM, 0)

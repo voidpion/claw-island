@@ -52,6 +52,8 @@ final class SessionManager: ObservableObject {
         s.lastActivity = Date()
         if let model = e.model { s.model = model }
         if let cwd = e.cwd { s.cwd = cwd }
+        if let tty = e.tty { s.tty = tty }
+        debugLog("handleSessionStart id=\(e.sessionId.prefix(8)) tty=\(e.tty ?? "nil") cwd=\(e.cwd ?? "nil")")
         // compact / resume: session continues — preserve title, start time, and status.
         // startup / clear / unknown: fresh session, fully reset.
         let isContinuation = e.source == "compact" || e.source == "resume"
@@ -283,6 +285,17 @@ final class SessionManager: ObservableObject {
             s.cwd = cwd
             s.pid = pid_t(pid)
 
+            // 用 sysctl 获取该进程的 controlling terminal
+            var kinfo = kinfo_proc()
+            var kinfoSize = MemoryLayout<kinfo_proc>.size
+            var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid_t(pid)]
+            if sysctl(&mib, 4, &kinfo, &kinfoSize, nil, 0) == 0 {
+                let dev = kinfo.kp_eproc.e_tdev
+                if dev != 0 && dev != -1, let ptr = devname(dev, S_IFCHR) {
+                    s.tty = "/dev/" + String(cString: ptr)
+                }
+            }
+
             // Set startTime from startedAt (epoch ms)
             if let startedAt = obj["startedAt"] as? TimeInterval {
                 s.startTime = Date(timeIntervalSince1970: startedAt / 1000)
@@ -364,18 +377,74 @@ final class SessionManager: ObservableObject {
         }
         guard let app = findAncestorApp(of: claudePid) else { return }
 
-        // 有 Accessibility 权限时精准定位窗口；否则退化到激活 app
         if AXIsProcessTrusted() {
-            raiseWindow(appPid: app.processIdentifier, session: session)
+            if let tty = session.tty {
+                raiseWindowByTTY(appPid: app.processIdentifier, session: session, tty: tty)
+            } else {
+                raiseWindow(appPid: app.processIdentifier, session: session)
+            }
         } else {
-            // 首次：弹出 Accessibility 授权请求，下次点击生效
             let key = "AXTrustedCheckOptionPrompt" as CFString
             AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
             app.activate(options: .activateIgnoringOtherApps)
         }
     }
 
-    /// 用 AX API 找到标题包含 session cwd 目录名的窗口并 raise。
+    /// 向 tty slave 写入 OSC 标题转义序列，等终端刷新标题后用 AX API 找到对应窗口并 raise。
+    /// 原理：写入 slave → 终端模拟器从 master 读取 → 更新窗口/tab 标题 → AX 可见。
+    private func raiseWindowByTTY(appPid: pid_t, session: Session, tty: String) {
+        let marker = "claw-\(session.id.prefix(8))"
+        let osc     = "\u{1B}]0;\(marker)\u{07}"
+
+        let fd = Darwin.open(tty, O_WRONLY | O_NOCTTY)
+        guard fd >= 0 else { raiseWindow(appPid: appPid, session: session); return }
+        let written = osc.withCString { Darwin.write(fd, $0, strlen($0)) }
+        Darwin.close(fd)
+        guard written > 0 else { raiseWindow(appPid: appPid, session: session); return }
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+
+            // 先 activate — 触发 macOS 将跨 Space 的窗口暴露给 AX
+            NSRunningApplication(processIdentifier: appPid)?.activate(options: .activateIgnoringOtherApps)
+            try? await Task.sleep(for: .milliseconds(150))
+
+            let axApp = AXUIElementCreateApplication(appPid)
+            var windowsRef: AnyObject?
+            guard AXUIElementCopyAttributeValue(axApp, kAXWindowsAttribute as CFString, &windowsRef) == .success,
+                  let windows = windowsRef as? [AXUIElement], !windows.isEmpty else { return }
+
+            // 优先 OSC marker 匹配，其次 cwd 目录名匹配
+            let cwdName = session.cwd.map { URL(fileURLWithPath: $0).lastPathComponent } ?? ""
+            var oscTarget: AXUIElement?
+            var cwdTarget: AXUIElement?
+
+            for window in windows {
+                var titleRef: AnyObject?
+                guard AXUIElementCopyAttributeValue(window, kAXTitleAttribute as CFString, &titleRef) == .success,
+                      let title = titleRef as? String else { continue }
+                debugLog("raiseWindowByTTY: window title='\(title)'")
+                if title.contains(marker) { oscTarget = window; break }
+                if !cwdName.isEmpty && title.contains(cwdName) { cwdTarget = window }
+            }
+
+            let target = oscTarget ?? cwdTarget
+            if let target {
+                AXUIElementPerformAction(target, kAXRaiseAction as CFString)
+            }
+
+            // 恢复窗口标题为 cwd 最后一段
+            guard !cwdName.isEmpty else { return }
+            let restoreOsc = "\u{1B}]0;\(cwdName)\u{07}"
+            let rfd = Darwin.open(tty, O_WRONLY | O_NOCTTY)
+            if rfd >= 0 {
+                restoreOsc.withCString { _ = Darwin.write(rfd, $0, strlen($0)) }
+                Darwin.close(rfd)
+            }
+        }
+    }
+
+    /// 按 cwd 目录名匹配窗口标题（tty 不可用时的 fallback）。
     private func raiseWindow(appPid: pid_t, session: Session) {
         let axApp = AXUIElementCreateApplication(appPid)
         var windowsRef: AnyObject?
@@ -385,7 +454,6 @@ final class SessionManager: ObservableObject {
             return
         }
 
-        // 用 cwd 最后一段目录名匹配窗口标题
         let dirName = session.cwd.map { URL(fileURLWithPath: $0).lastPathComponent } ?? ""
         var target: AXUIElement = windows[0]
         if !dirName.isEmpty {
