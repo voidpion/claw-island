@@ -24,6 +24,7 @@ final class Session: ObservableObject, Identifiable {
     @Published var startTime: Date = Date()
     @Published var lastActivity: Date = Date()
     @Published var cwd: String?
+    var pid: pid_t?
 
     var pendingApprovalContinuation: CheckedContinuation<HookResponse, Never>?
 
