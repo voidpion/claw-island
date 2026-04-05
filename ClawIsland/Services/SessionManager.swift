@@ -1,6 +1,5 @@
 import AppKit
 import Foundation
-import UserNotifications
 
 @MainActor
 final class SessionManager: ObservableObject {
@@ -12,7 +11,6 @@ final class SessionManager: ObservableObject {
     private let socketServer = SocketServer()
 
     func start() {
-        requestNotificationPermission()
         try? socketServer.start { [weak self] event in
             guard let self else { return nil }
             return await self.handle(event: event)
@@ -154,7 +152,6 @@ final class SessionManager: ObservableObject {
         s.status = .notifying(message: msg)
         s.lastActivity = Date()
         onAutoExpand?()
-        sendSystemNotification(title: e.title ?? s.title, body: msg, id: e.sessionId + "-notif")
     }
 
     private func handleUserPromptSubmit(_ e: UserPromptSubmitEvent) {
@@ -185,11 +182,7 @@ final class SessionManager: ObservableObject {
         s.status      = .completed
         s.currentTool = nil
         s.lastActivity = Date()
-        sendSystemNotification(
-            title: "Task Completed",
-            body: "\(s.title) · \(s.elapsedTime)",
-            id: s.id + "-stop"
-        )
+        onAutoExpand?()
         // Do NOT remove here — Stop fires after every response, not just at session end.
         // SessionEnd handles removal when the user actually exits claude.
     }
@@ -345,21 +338,6 @@ final class SessionManager: ObservableObject {
                 try? data.write(to: url, options: .atomic)
             }
         }
-    }
-
-    private func requestNotificationPermission() {
-        UNUserNotificationCenter.current()
-            .requestAuthorization(options: [.alert, .sound]) { _, _ in }
-    }
-
-    private func sendSystemNotification(title: String, body: String, id: String) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body  = body
-        content.sound = .default
-        UNUserNotificationCenter.current().add(
-            UNNotificationRequest(identifier: id, content: content, trigger: nil)
-        )
     }
 
     // MARK: - Window focus
