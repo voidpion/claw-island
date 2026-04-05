@@ -17,6 +17,9 @@ enum HookEvent: Codable, Sendable {
     case subagentStop(SubagentStopEvent)
     case userPromptSubmit(UserPromptSubmitEvent)
     case preCompact(PreCompactEvent)
+    case postCompact(PostCompactEvent)
+    case postToolUseFailure(PostToolUseFailureEvent)
+    case stopFailure(StopFailureEvent)
     case unknown(String)
 
     enum CodingKeys: String, CodingKey {
@@ -49,6 +52,12 @@ enum HookEvent: Codable, Sendable {
             self = .userPromptSubmit(try UserPromptSubmitEvent(from: decoder))
         case "PreCompact":
             self = .preCompact(try PreCompactEvent(from: decoder))
+        case "PostCompact":
+            self = .postCompact(try PostCompactEvent(from: decoder))
+        case "PostToolUseFailure":
+            self = .postToolUseFailure(try PostToolUseFailureEvent(from: decoder))
+        case "StopFailure":
+            self = .stopFailure(try StopFailureEvent(from: decoder))
         default:
             self = .unknown(name)
         }
@@ -67,6 +76,9 @@ enum HookEvent: Codable, Sendable {
         case .subagentStop(let e): try e.encode(to: encoder)
         case .userPromptSubmit(let e): try e.encode(to: encoder)
         case .preCompact(let e): try e.encode(to: encoder)
+        case .postCompact(let e): try e.encode(to: encoder)
+        case .postToolUseFailure(let e): try e.encode(to: encoder)
+        case .stopFailure(let e): try e.encode(to: encoder)
         case .unknown: break
         }
     }
@@ -84,6 +96,9 @@ enum HookEvent: Codable, Sendable {
         case .subagentStop(let e): e.sessionId
         case .userPromptSubmit(let e): e.sessionId
         case .preCompact(let e): e.sessionId
+        case .postCompact(let e): e.sessionId
+        case .postToolUseFailure(let e): e.sessionId
+        case .stopFailure(let e): e.sessionId
         case .unknown: ""
         }
     }
@@ -101,6 +116,9 @@ enum HookEvent: Codable, Sendable {
         case .subagentStop(let e): e.transcriptPath
         case .userPromptSubmit(let e): e.transcriptPath
         case .preCompact(let e): e.transcriptPath
+        case .postCompact(let e): e.transcriptPath
+        case .postToolUseFailure(let e): e.transcriptPath
+        case .stopFailure(let e): e.transcriptPath
         case .unknown: nil
         }
     }
@@ -288,6 +306,60 @@ struct PreCompactEvent: Codable, Sendable {
         case transcriptPath = "transcript_path"
         case trigger
         case customInstructions = "custom_instructions"
+    }
+}
+
+// MARK: - PostCompact
+
+struct PostCompactEvent: Codable, Sendable {
+    let sessionId: String
+    let transcriptPath: String?
+    let trigger: String
+    let compactSummary: String?
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case transcriptPath = "transcript_path"
+        case trigger
+        case compactSummary = "compact_summary"
+    }
+}
+
+// MARK: - PostToolUseFailure
+
+struct PostToolUseFailureEvent: Codable, Sendable {
+    let sessionId: String
+    let transcriptPath: String?
+    let toolName: String
+    let toolInput: JSONValue
+    let error: String
+    let isInterrupt: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case transcriptPath = "transcript_path"
+        case toolName = "tool_name"
+        case toolInput = "tool_input"
+        case error
+        case isInterrupt = "is_interrupt"
+    }
+}
+
+// MARK: - StopFailure
+
+struct StopFailureEvent: Codable, Sendable {
+    let sessionId: String
+    let transcriptPath: String?
+    /// "rate_limit" | "authentication_failed" | "billing_error" |
+    /// "invalid_request" | "server_error" | "max_output_tokens" | "unknown"
+    let error: String
+    let errorDetails: String?
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case transcriptPath = "transcript_path"
+        case error
+        case errorDetails = "error_details"
     }
 }
 
