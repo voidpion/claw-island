@@ -164,10 +164,7 @@ private struct NotchPill: View {
     var body: some View {
         GeometryReader { geo in
             NotchPillShape(bottomRadius: bottomRadius)
-                .fill(LinearGradient(
-                    colors: [Color(white: 0.11), Color(white: 0.04)],
-                    startPoint: .top, endPoint: .bottom
-                ))
+                .fill(Color.black)
                 .overlay(
                     NotchPillShape(bottomRadius: bottomRadius)
                         .strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5)

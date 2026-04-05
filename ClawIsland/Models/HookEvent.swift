@@ -124,12 +124,14 @@ struct PermissionRequestEvent: Codable, Sendable {
     let transcriptPath: String?
     let toolName: String
     let toolInput: JSONValue
+    let permissionSuggestions: [JSONValue]?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case toolName = "tool_name"
         case toolInput = "tool_input"
+        case permissionSuggestions = "permission_suggestions"
     }
 }
 
@@ -298,6 +300,7 @@ struct HookResponse: Codable, Sendable {
     }
     let decision: Decision
     let reason: String?
+    let updatedPermissions: [JSONValue]?
 }
 
 // MARK: - JSONValue  (arbitrary JSON, avoids Any)

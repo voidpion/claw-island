@@ -78,6 +78,13 @@ struct HookInstaller {
             // Remove any stale claw-island entries
             entries.removeAll { isClaIslandEntry($0) }
 
+            // For PermissionRequest, remove competing bridges that would
+            // auto-allow and bypass our approval UI (e.g. vibe-island-bridge
+            // when Vibe Island is not running).
+            if event == "PermissionRequest" {
+                entries.removeAll { isCompetingPermissionBridge($0) }
+            }
+
             var hookEntry: [String: Any] = [
                 "type": "command",
                 "command": bridgeInstallPath,
@@ -117,6 +124,20 @@ struct HookInstaller {
         guard let hookList = entry["hooks"] as? [[String: Any]] else { return false }
         return hookList.contains { hook in
             (hook["command"] as? String)?.contains("claw-bridge") == true
+        }
+    }
+
+    /// Detect third-party bridges that compete for PermissionRequest handling.
+    /// These must be removed because they auto-allow when their host app isn't
+    /// running, which bypasses our approval UI entirely.
+    private static func isCompetingPermissionBridge(_ entry: [String: Any]) -> Bool {
+        guard let hookList = entry["hooks"] as? [[String: Any]] else { return false }
+        return hookList.contains { hook in
+            guard let cmd = hook["command"] as? String else { return false }
+            // Skip our own entry
+            if cmd.contains("claw-bridge") { return false }
+            // Any other command hook for PermissionRequest is a competitor
+            return true
         }
     }
 

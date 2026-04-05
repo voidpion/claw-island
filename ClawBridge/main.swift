@@ -63,17 +63,64 @@ let isPermissionEvent = eventName == "PermissionRequest"
 if isPermissionEvent {
     if let responseData = receiveData(sock: sock),
        let response = try? JSONDecoder().decode(BridgeResponse.self, from: responseData) {
+        let raw = String(data: responseData, encoding: .utf8) ?? "?"
+        writeLog("claw-bridge: received response: \(raw), decision=\(response.decision)")
         close(sock)
-        // Exit 2 = deny; 0 = allow
-        exit(response.decision == "allow" ? 0 : 2)
+
+        // Claude Code expects (per official docs):
+        // {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"allow"}}}
+        // {"hookSpecificOutput":{"hookEventName":"PermissionRequest","decision":{"behavior":"deny","message":"..."}}}
+        let behavior: String
+        var message: String? = nil
+        if response.decision == "allow" {
+            behavior = "allow"
+        } else {
+            behavior = "deny"
+            message = "Denied by user"
+        }
+
+        var decisionObj: [String: Any] = ["behavior": behavior]
+        if let msg = message {
+            decisionObj["message"] = msg
+        }
+        if let perms = response.updatedPermissions?.value {
+            decisionObj["updatedPermissions"] = perms
+        }
+        let stdoutObj: [String: Any] = [
+            "hookSpecificOutput": [
+                "hookEventName": "PermissionRequest",
+                "decision": decisionObj
+            ]
+        ]
+
+        if let stdoutData = try? JSONSerialization.data(withJSONObject: stdoutObj) {
+            let stdoutStr = String(data: stdoutData, encoding: .utf8) ?? "?"
+            writeLog("claw-bridge: writing to stdout: \(stdoutStr)")
+            FileHandle.standardOutput.write(stdoutData)
+        }
+        exit(0)
     }
     // On timeout/error, allow by default
+    writeLog("claw-bridge: ERROR — no response received, defaulting to allow")
     close(sock)
     exit(0)
 }
 
 close(sock)
 exit(0)
+
+// MARK: - Logging
+
+func writeLog(_ msg: String) {
+    let line = "\(Date()) \(msg)\n"
+    guard let data = line.data(using: .utf8) else { return }
+    let url = URL(fileURLWithPath: "/tmp/claw-bridge.log")
+    if let fh = try? FileHandle(forWritingTo: url) {
+        fh.seekToEndOfFile(); fh.write(data); fh.closeFile()
+    } else {
+        try? data.write(to: url, options: .atomic)
+    }
+}
 
 // MARK: - I/O helpers
 
@@ -117,4 +164,21 @@ func readExact(sock: Int32, buf: inout [UInt8], count: Int) -> Bool {
 
 struct BridgeResponse: Decodable {
     let decision: String   // "allow" | "deny"
+    let updatedPermissions: AnyJSON?  // arbitrary JSON array
+}
+
+/// Wraps arbitrary JSON for Codable — used to pass updatedPermissions through.
+struct AnyJSON: Decodable {
+    let value: Any
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if c.decodeNil() { value = NSNull() }
+        else if let v = try? c.decode(Bool.self) { value = v }
+        else if let v = try? c.decode(Int.self) { value = v }
+        else if let v = try? c.decode(Double.self) { value = v }
+        else if let v = try? c.decode(String.self) { value = v }
+        else if let v = try? c.decode([AnyJSON].self) { value = v.map(\.value) }
+        else if let v = try? c.decode([String: AnyJSON].self) { value = v.mapValues(\.value) }
+        else { value = NSNull() }
+    }
 }
