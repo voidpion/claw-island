@@ -67,54 +67,38 @@ struct NotchContentView: View {
     }
 
     // MARK: - Compact bar
-    // Layout: [左翼: AgentIcon 固定左 | dots 居中] [notch gap] [右翼: session count 居中]
-    // 量 dots 自然宽度 → 推算最小 sideWidth → 窗口 = sideWidth × 2 + notchWidth
+    // Layout: [左翼: AgentIcon 居中] [notch gap] [右翼: dots 居中]
+    // 两翼等宽，由 dots 自然宽度 + 内边距推算 sideWidth → 窗口 = sideWidth × 2 + notchWidth
 
     private var compactBar: some View {
         let edgePad: CGFloat = 14
-        // 左翼最小宽度 = edgePad(14) + icon(18) + 两侧 minSpacer(6+6) + dotsWidth
-        let leftWingFixed: CGFloat = edgePad + 18 + 12  // 不含 dots，dots 单独量
 
         return HStack(spacing: 0) {
-            // 左翼：AgentIcon 固定左，dots 在剩余空间居中
-            HStack(spacing: 0) {
-                AgentIcon(hasApproval: hasApprovalPending,
-                          hasSessions: !sessionManager.sessions.isEmpty)
-                    .padding(.leading, edgePad)
-                Spacer(minLength: 6)
-                HStack(spacing: 4) {
-                    ForEach(sessionManager.sessions) { s in
-                        StatusDot(session: s)
-                    }
-                }
-                // 量 dots 宽度，推算 sideWidth 上报给 controller
-                .background(GeometryReader { geo in
-                    Color.clear.preference(
-                        key: CollapsedWidthKey.self,
-                        value: max(leftWingFixed + geo.size.width, 90)
-                    )
-                })
-                Spacer(minLength: 6)
-            }
-            .frame(maxWidth: .infinity)
+            // 左翼：AgentIcon 居中
+            AgentIcon(hasApproval: hasApprovalPending,
+                      hasSessions: !sessionManager.sessions.isEmpty)
+                .frame(maxWidth: .infinity)
 
-            // 硬件 notch 占位 — 无内容
+            // 硬件 notch 占位
             Color.clear.frame(width: viewModel.notchWidth > 0 ? viewModel.notchWidth : 0)
 
-            // 右翼："N sessions" 水平居中
-            let count = sessionManager.sessions.count
-            (Text("\(count) ")
-                .foregroundStyle(.white.opacity(0.55))
-            + Text("session\(count == 1 ? "" : "s")")
-                .foregroundStyle(.white.opacity(0.25)))
-                .font(.system(size: 10, weight: .regular, design: .monospaced))
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
-                .frame(maxWidth: .infinity, alignment: .center)
+            // 右翼：dots 居中，量宽推算 sideWidth
+            HStack(spacing: 4) {
+                ForEach(sessionManager.sessions) { s in
+                    StatusDot(session: s)
+                }
+            }
+            .background(GeometryReader { geo in
+                Color.clear.preference(
+                    key: CollapsedWidthKey.self,
+                    value: max(geo.size.width + edgePad * 2, 46)
+                )
+            })
+            .frame(maxWidth: .infinity)
         }
-        .onPreferenceChange(CollapsedWidthKey.self) { minSide in
+        .onPreferenceChange(CollapsedWidthKey.self) { sideWidth in
             if !viewModel.expanded {
-                viewModel.collapsedContentWidth = minSide
+                viewModel.collapsedContentWidth = sideWidth
             }
         }
     }
