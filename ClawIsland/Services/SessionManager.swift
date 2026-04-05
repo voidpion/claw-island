@@ -27,9 +27,6 @@ final class SessionManager: ObservableObject {
         case .preToolUse(let e):        handlePreToolUse(e)
         case .postToolUse(let e):       handlePostToolUse(e)
         case .notification(let e):
-            if e.notificationType == "permission_prompt" {
-                return await handleNotificationPermissionPrompt(e)
-            }
             handleNotification(e)
         case .stop(let e):              handleStop(e)
         case .sessionEnd(let e):        handleSessionEnd(e)
@@ -82,29 +79,18 @@ final class SessionManager: ObservableObject {
     }
 
     private func handlePermissionRequest(_ e: PermissionRequestEvent) async -> HookResponse {
+        debugLog("handlePermissionRequest: session \(e.sessionId.prefix(8)), tool=\(e.toolName)")
         let s = findOrNearest(id: e.sessionId, transcriptPath: e.transcriptPath)
         s.status = .waitingApproval(e)
         s.lastActivity = Date()
         onAutoExpand?()
-        return await withCheckedContinuation { continuation in
+        debugLog("handlePermissionRequest: waiting for user action on session \(s.id.prefix(8))")
+        let response = await withCheckedContinuation { continuation in
             s.pendingApprovalContinuation = continuation
+            debugLog("handlePermissionRequest: continuation stored for session \(s.id.prefix(8)), continuation present: \(s.pendingApprovalContinuation != nil)")
         }
-    }
-
-    private func handleNotificationPermissionPrompt(_ e: NotificationEvent) async -> HookResponse {
-        let s = findOrNearest(id: e.sessionId, transcriptPath: e.transcriptPath)
-        let fakeEvent = PermissionRequestEvent(
-            sessionId: e.sessionId,
-            transcriptPath: e.transcriptPath,
-            toolName: "Permission",
-            toolInput: .string(e.message)
-        )
-        s.status = .waitingApproval(fakeEvent)
-        s.lastActivity = Date()
-        onAutoExpand?()
-        return await withCheckedContinuation { continuation in
-            s.pendingApprovalContinuation = continuation
-        }
+        debugLog("handlePermissionRequest: got response decision=\(response.decision) for session \(s.id.prefix(8))")
+        return response
     }
 
     private func handlePreToolUse(_ e: PreToolUseEvent) {
@@ -149,7 +135,10 @@ final class SessionManager: ObservableObject {
     private func handleNotification(_ e: NotificationEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
         let msg = e.message.trimmingCharacters(in: .whitespacesAndNewlines)
-        s.status = .notifying(message: msg)
+        // 不覆盖正在等待审批的 session — approval UI 优先级最高
+        if case .waitingApproval = s.status { } else {
+            s.status = .notifying(message: msg)
+        }
         s.lastActivity = Date()
         onAutoExpand?()
     }
@@ -209,10 +198,10 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Approval (called from UI)
 
-    func approve(session: Session) {
-        NSLog("[ClawIsland] approve called — continuation present: %d", session.pendingApprovalContinuation != nil ? 1 : 0)
+    func approve(session: Session, updatedPermissions: [JSONValue]? = nil) {
+        NSLog("[ClawIsland] approve called — continuation present: %d, updatedPermissions: %d", session.pendingApprovalContinuation != nil ? 1 : 0, updatedPermissions != nil ? 1 : 0)
         session.pendingApprovalContinuation?.resume(
-            returning: HookResponse(decision: .allow, reason: nil)
+            returning: HookResponse(decision: .allow, reason: nil, updatedPermissions: updatedPermissions)
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle
@@ -221,17 +210,7 @@ final class SessionManager: ObservableObject {
     func deny(session: Session, reason: String? = nil) {
         NSLog("[ClawIsland] deny called — continuation present: %d", session.pendingApprovalContinuation != nil ? 1 : 0)
         session.pendingApprovalContinuation?.resume(
-            returning: HookResponse(decision: .deny, reason: reason)
-        )
-        session.pendingApprovalContinuation = nil
-        session.status = .idle
-    }
-
-    /// Silently allow — dismisses the approval UI without surfacing a decision to the model.
-    func ignore(session: Session) {
-        NSLog("[ClawIsland] ignore called — continuation present: %d", session.pendingApprovalContinuation != nil ? 1 : 0)
-        session.pendingApprovalContinuation?.resume(
-            returning: HookResponse(decision: .allow, reason: nil)
+            returning: HookResponse(decision: .deny, reason: reason, updatedPermissions: nil)
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle

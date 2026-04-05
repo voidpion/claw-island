@@ -102,23 +102,47 @@ final class SocketServer: @unchecked Sendable {
             return
         }
 
-        log("calling handler...")
+        // Log the decoded event type for diagnosis
+        let eventType: String
+        switch event {
+        case .permissionRequest: eventType = "PermissionRequest"
+        case .preToolUse: eventType = "PreToolUse"
+        case .postToolUse: eventType = "PostToolUse"
+        case .notification: eventType = "Notification"
+        case .sessionStart: eventType = "SessionStart"
+        case .sessionEnd: eventType = "SessionEnd"
+        case .stop: eventType = "Stop"
+        case .userPromptSubmit: eventType = "UserPromptSubmit"
+        case .preCompact: eventType = "PreCompact"
+        case .subagentStart: eventType = "SubagentStart"
+        case .subagentStop: eventType = "SubagentStop"
+        case .unknown(let name): eventType = "Unknown(\(name))"
+        }
+        log("[\(fd)] event type=\(eventType), calling handler...")
         let response = await handler(event)
-        log("handler returned, response=\(response != nil ? "yes" : "nil")")
+        log("[\(fd)] handler returned, response=\(response != nil ? "yes" : "nil")")
 
         // PermissionRequest and permission_prompt Notification both wait for a response
         let needsResponse: Bool
         if case .permissionRequest = event {
             needsResponse = true
-        } else if case .notification(let n) = event, n.notificationType == "permission_prompt" {
-            needsResponse = true
         } else {
             needsResponse = false
         }
 
-        if needsResponse, let response,
-           let bytes = try? JSONEncoder().encode(response) {
-            writeLengthPrefixed(fd: fd, data: bytes)
+        if needsResponse {
+            if let response {
+                if let bytes = try? JSONEncoder().encode(response) {
+                    let jsonStr = String(data: bytes, encoding: .utf8) ?? "?"
+                    log("[\(fd)] writing response to socket: \(jsonStr)")
+                    writeLengthPrefixed(fd: fd, data: bytes)
+                    log("[\(fd)] response written successfully")
+                } else {
+                    log("[\(fd)] ERROR: failed to encode response")
+                }
+            } else {
+                log("[\(fd)] ERROR: needsResponse but response is nil!")
+            }
         }
     }
 
@@ -170,7 +194,10 @@ final class SocketServer: @unchecked Sendable {
             var sent = 0
             while sent < payload.count {
                 let n = write(fd, ptr.baseAddress! + sent, payload.count - sent)
-                if n <= 0 { return }
+                if n <= 0 {
+                    log("[\(fd)] writeLengthPrefixed FAILED: write returned \(n), errno=\(errno), total=\(payload.count), sent=\(sent)")
+                    return
+                }
                 sent += n
             }
         }
