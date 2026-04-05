@@ -28,8 +28,8 @@ struct ApprovalView: View {
             }
 
             // ── Input preview ────────────────────────────────────────
-            if !inputSummary.isEmpty {
-                Text(inputSummary)
+            if !formattedInput.isEmpty {
+                Text(formattedInput)
                     .font(.system(size: 10.5, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.55))
                     .lineLimit(4)
@@ -77,13 +77,80 @@ struct ApprovalView: View {
         }
     }
 
-    private var inputSummary: String {
-        let raw = event.toolInput.description
-        // Strip outer braces for cleaner display
+    /// Format tool input based on tool type for cleaner display.
+    private var formattedInput: String {
+        let input = event.toolInput
+        let cwd = session.cwd
+
+        switch event.toolName {
+        case "Bash":
+            // Show just the command
+            if let cmd = input["command"]?.description {
+                return cmd.prefix(300).description
+            }
+        case "Read":
+            // Show file path only
+            if let path = input["file_path"]?.description {
+                return stripCwd(path, cwd: cwd)
+            }
+        case "Write":
+            // Show file path + first few lines of content
+            if let path = input["file_path"]?.description {
+                let clean = stripCwd(path, cwd: cwd)
+                if let content = input["content"]?.description {
+                    let preview = String(content.prefix(120))
+                    return "\(clean)\n\(preview)"
+                }
+                return clean
+            }
+        case "Edit":
+            // Show file path + old → new
+            if let path = input["file_path"]?.description {
+                let clean = stripCwd(path, cwd: cwd)
+                var parts = [clean]
+                if let old = input["old_string"]?.description {
+                    parts.append("- \(String(old.prefix(80)))")
+                }
+                if let new = input["new_string"]?.description {
+                    parts.append("+ \(String(new.prefix(80)))")
+                }
+                return parts.joined(separator: "\n")
+            }
+        case "Grep":
+            if let pattern = input["pattern"]?.description {
+                var result = "pattern: \(pattern)"
+                if let glob = input["glob"]?.description {
+                    result += "  glob: \(glob)"
+                }
+                return result
+            }
+        case "Glob":
+            if let pattern = input["pattern"]?.description {
+                return "pattern: \(pattern)"
+            }
+        case "Agent":
+            if let desc = input["description"]?.description {
+                return desc
+            }
+        case "WebFetch", "WebSearch":
+            if let url = input["url"]?.description { return url }
+            if let q = input["query"]?.description { return q }
+        default:
+            break
+        }
+
+        // Fallback: raw description, trimmed
+        let raw = input.description
         if raw.hasPrefix("{") && raw.hasSuffix("}") {
             return String(raw.dropFirst().dropLast()).trimmingCharacters(in: .whitespaces)
         }
         return String(raw.prefix(240))
+    }
+
+    /// Strip cwd prefix from file paths for cleaner display.
+    private func stripCwd(_ path: String, cwd: String?) -> String {
+        guard let cwd, path.hasPrefix(cwd + "/") else { return path }
+        return String(path.dropFirst(cwd.count + 1))
     }
 }
 

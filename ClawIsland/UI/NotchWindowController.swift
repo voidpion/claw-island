@@ -64,6 +64,13 @@ final class NotchWindowController: NSWindowController {
             }
         }
 
+        sessionManager.onAutoCollapse = { [weak self] in
+            guard let self, viewModel.expanded else { return }
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                viewModel.expanded = false
+            }
+        }
+
         sessionManager.start()
         startMouseMonitor()
 

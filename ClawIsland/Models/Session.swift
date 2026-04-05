@@ -24,14 +24,31 @@ final class Session: ObservableObject, Identifiable {
     @Published var startTime: Date = Date()
     @Published var lastActivity: Date = Date()
     @Published var cwd: String?
+    @Published var lastError: String?
     var pid: pid_t?
     var tty: String?      // controlling terminal path, e.g. "/dev/ttys003"
 
     var pendingApprovalContinuation: CheckedContinuation<HookResponse, Never>?
 
+    /// Timer to refresh elapsedTime display every minute.
+    private nonisolated(unsafe) var elapsedTimer: Timer?
+
     init(id: String, transcriptPath: String?) {
         self.id = id
         self.transcriptPath = transcriptPath
+        startElapsedTimer()
+    }
+
+    private func startElapsedTimer() {
+        elapsedTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            // Trigger re-render by touching a published property
+            objectWillChange.send()
+        }
+    }
+
+    deinit {
+        elapsedTimer?.invalidate()
     }
 
     var title: String {
@@ -81,7 +98,9 @@ final class Session: ObservableObject, Identifiable {
             return m.trimmingCharacters(in: .whitespacesAndNewlines)
         case .compacting:      return "Compacting…"
         case .completed:       return "Done · \(elapsedTime)"
-        case .failed:          return "Failed"
+        case .failed:
+            if let err = lastError { return "✗ \(err)" }
+            return "Failed"
         }
     }
 
@@ -104,6 +123,7 @@ final class Session: ObservableObject, Identifiable {
         case .completed:
             return "Done · \(elapsedTime)"
         case .failed:
+            if let err = lastError { return "✗ \(err)" }
             return "Failed"
         }
     }

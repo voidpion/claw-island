@@ -8,6 +8,9 @@ final class SessionManager: ObservableObject {
     /// Controller sets this to be notified when a session needs the panel auto-expanded
     var onAutoExpand: (() -> Void)?
 
+    /// Called after approval/deny to schedule panel auto-collapse.
+    var onAutoCollapse: (() -> Void)?
+
     private let socketServer = SocketServer()
 
     func start() {
@@ -32,6 +35,9 @@ final class SessionManager: ObservableObject {
         case .sessionEnd(let e):        handleSessionEnd(e)
         case .userPromptSubmit(let e):  handleUserPromptSubmit(e)
         case .preCompact(let e):        handlePreCompact(e)
+        case .postCompact(let e):       handlePostCompact(e)
+        case .postToolUseFailure(let e): handlePostToolUseFailure(e)
+        case .stopFailure(let e):       handleStopFailure(e)
         case .subagentStart(let e):     handleSubagentStart(e)
         case .subagentStop(let e):      handleSubagentStop(e)
         case .unknown:                  break
@@ -135,10 +141,10 @@ final class SessionManager: ObservableObject {
     private func handleNotification(_ e: NotificationEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
         let msg = e.message.trimmingCharacters(in: .whitespacesAndNewlines)
-        // 不覆盖正在等待审批的 session — approval UI 优先级最高
-        if case .waitingApproval = s.status { } else {
-            s.status = .notifying(message: msg)
-        }
+        // 不覆盖正在等待审批或运行中的 session
+        if case .waitingApproval = s.status { return }
+        if case .running = s.status { return }
+        s.status = .notifying(message: msg)
         s.lastActivity = Date()
         onAutoExpand?()
     }
@@ -147,8 +153,12 @@ final class SessionManager: ObservableObject {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
         let trimmed = e.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
-            // Only set once — first prompt establishes the session title; later prompts don't override.
-            if s.customTitle == nil {
+            // Use the longest meaningful prompt as the title (prefer detailed instructions over "hi")
+            if trimmed.count > 5 {
+                if s.customTitle == nil || trimmed.count > (s.customTitle?.count ?? 0) {
+                    s.customTitle = String(trimmed.prefix(80))
+                }
+            } else if s.customTitle == nil {
                 s.customTitle = trimmed
             }
             s.lastUserPrompt = trimmed
@@ -164,6 +174,47 @@ final class SessionManager: ObservableObject {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
         s.status = .compacting
         s.lastActivity = Date()
+    }
+
+    private func handlePostCompact(_ e: PostCompactEvent) {
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        // Compact finished — go back to idle. Next event will update if needed.
+        s.status = .idle
+        s.lastActivity = Date()
+    }
+
+    private func handlePostToolUseFailure(_ e: PostToolUseFailureEvent) {
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        let desc = Self.toolDescription(name: e.toolName, input: e.toolInput, cwd: s.cwd)
+        // Brief error flash, then next event will update status
+        s.status = .failed
+        s.lastError = "\(desc) failed"
+        s.currentTool = nil
+        s.lastActivity = Date()
+        debugLog("handlePostToolUseFailure: \(desc) — \(e.error.prefix(100))")
+    }
+
+    private func handleStopFailure(_ e: StopFailureEvent) {
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        s.status = .failed
+        s.lastError = Self.friendlyError(e.error)
+        s.currentTool = nil
+        s.lastActivity = Date()
+        onAutoExpand?()
+        debugLog("handleStopFailure: error=\(e.error) details=\(e.errorDetails ?? "nil")")
+    }
+
+    /// User-friendly error messages for StopFailure error types.
+    private static func friendlyError(_ raw: String) -> String {
+        switch raw {
+        case "rate_limit":          return "Rate limited"
+        case "authentication_failed": return "Auth failed"
+        case "billing_error":       return "Billing error"
+        case "max_output_tokens":   return "Output too long"
+        case "server_error":        return "Server error"
+        case "invalid_request":     return "Invalid request"
+        default:                    return raw
+        }
     }
 
     private func handleStop(_ e: StopEvent) {
@@ -205,6 +256,7 @@ final class SessionManager: ObservableObject {
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle
+        scheduleAutoCollapse()
     }
 
     func deny(session: Session, reason: String? = nil) {
@@ -214,6 +266,19 @@ final class SessionManager: ObservableObject {
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle
+        scheduleAutoCollapse()
+    }
+
+    /// Auto-collapse after a brief delay if no new approval is pending.
+    private func scheduleAutoCollapse() {
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            guard !sessions.contains(where: {
+                if case .waitingApproval = $0.status { return true }
+                return false
+            }) else { return }
+            onAutoCollapse?()
+        }
     }
 
     // MARK: - Startup recovery

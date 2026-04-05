@@ -15,14 +15,17 @@ struct HookInstaller {
         ("PermissionRequest",  86400),   // blocks — long timeout
         ("PreToolUse",         nil),
         ("PostToolUse",        nil),
+        ("PostToolUseFailure", nil),
         ("Notification",       nil),
         ("SessionStart",       nil),
         ("SessionEnd",         nil),
         ("Stop",               nil),
+        ("StopFailure",        nil),
         ("SubagentStart",      nil),
         ("SubagentStop",       nil),
         ("UserPromptSubmit",   nil),
         ("PreCompact",         nil),
+        ("PostCompact",        nil),
     ]
 
     // MARK: - Public API
