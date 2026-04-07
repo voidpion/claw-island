@@ -138,23 +138,25 @@ private struct SessionAvatar: View {
     }
 
     var body: some View {
+        let lines = BuddyArt.frames[session.buddyIndex][frame]
+
         ZStack {
             // 仅 active 状态保留一个模糊光晕
             if isActive {
                 Circle()
-                    .fill(statusColor.opacity(pulse ? 0.22 : 0))
-                    .blur(radius: 6)
-                    .frame(width: 34, height: 34)
+                    .fill(statusColor.opacity(pulse ? 0.18 : 0))
+                    .blur(radius: 5)
+                    .frame(width: 32, height: 32)
             }
 
-            // Pixel buddy — Canvas 渲染
-            BuddyCanvas(speciesIndex: session.buddyIndex,
-                        frame: frame,
-                        color: statusColor.opacity(0.92))
-                .frame(width: 36, height: 36)
-                .animation(.easeInOut(duration: 0.1), value: frame)
+            // ASCII buddy — 4 行 monospaced
+            Text(lines.joined(separator: "\n"))
+                .font(.system(size: 7, design: .monospaced))
+                .foregroundStyle(statusColor.opacity(0.9))
+                .fixedSize()
+                .animation(.easeInOut(duration: 0.12), value: frame)
         }
-        .frame(width: 38, height: 42)
+        .frame(width: 44, height: 44)
         .task(id: isActive) {
             if isActive {
                 withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
@@ -174,36 +176,6 @@ private struct SessionAvatar: View {
         .animation(.spring(response: 0.3), value: session.status.discriminator)
     }
 
-}
-
-// MARK: - Pixel art canvas view
-
-private struct BuddyCanvas: View {
-    let speciesIndex: Int
-    let frame: Int
-    let color: Color
-
-    var body: some View {
-        Canvas { context, size in
-            guard speciesIndex < BuddyPixels.frames.count,
-                  frame < BuddyPixels.frames[speciesIndex].count else { return }
-
-            let frameData = BuddyPixels.frames[speciesIndex][frame]
-            let pw = size.width  / CGFloat(BuddyPixels.cols)
-            let ph = size.height / CGFloat(BuddyPixels.rows)
-
-            for (rowIdx, bitmask) in frameData.enumerated() {
-                for col in 0..<BuddyPixels.cols {
-                    let bit = UInt8(5 - col)
-                    guard (bitmask >> bit) & 1 == 1 else { continue }
-                    let rect = CGRect(x: CGFloat(col) * pw,
-                                     y: CGFloat(rowIdx) * ph,
-                                     width: pw, height: ph)
-                    context.fill(Path(rect), with: .color(color))
-                }
-            }
-        }
-    }
 }
 
 // MARK: - Discriminator for animation keying
