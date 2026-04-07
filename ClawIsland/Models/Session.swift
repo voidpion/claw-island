@@ -65,6 +65,13 @@ final class Session: ObservableObject, Identifiable {
 
     var shortId: String { String(id.prefix(8)) }
 
+    /// 根据 session ID hash 确定性地分配一只 buddy（0-17），同一 session 永远是同一只。
+    var buddyIndex: Int {
+        let hex = id.replacingOccurrences(of: "-", with: "").prefix(8)
+        let hash = UInt32(hex, radix: 16) ?? 0
+        return Int(hash % 18)
+    }
+
     var elapsedTime: String {
         let interval = Date().timeIntervalSince(startTime)
         let minutes = Int(interval / 60)

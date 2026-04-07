@@ -11,6 +11,8 @@ final class SessionManager: ObservableObject {
     /// Called after approval/deny to schedule panel auto-collapse.
     var onAutoCollapse: (() -> Void)?
 
+    var soundManager: SoundManager?
+
     private let socketServer = SocketServer()
 
     func start() {
@@ -68,6 +70,7 @@ final class SessionManager: ObservableObject {
             s.startTime = Date()
             s.customTitle = nil
             s.subagentCount = 0
+            soundManager?.play(.sessionStart)
         }
         // Read initial title & model from transcript JSONL
         if let path = e.transcriptPath {
@@ -90,6 +93,7 @@ final class SessionManager: ObservableObject {
         s.status = .waitingApproval(e)
         s.lastActivity = Date()
         onAutoExpand?()
+        soundManager?.play(.permissionRequest)
         debugLog("handlePermissionRequest: waiting for user action on session \(s.id.prefix(8))")
         let response = await withCheckedContinuation { continuation in
             s.pendingApprovalContinuation = continuation
@@ -147,6 +151,7 @@ final class SessionManager: ObservableObject {
         s.status = .notifying(message: msg)
         s.lastActivity = Date()
         onAutoExpand?()
+        soundManager?.play(.notification)
     }
 
     private func handleUserPromptSubmit(_ e: UserPromptSubmitEvent) {
@@ -191,6 +196,7 @@ final class SessionManager: ObservableObject {
         s.lastError = "\(desc) failed"
         s.currentTool = nil
         s.lastActivity = Date()
+        soundManager?.play(.postToolUseFailure)
         debugLog("handlePostToolUseFailure: \(desc) — \(e.error.prefix(100))")
     }
 
@@ -201,6 +207,7 @@ final class SessionManager: ObservableObject {
         s.currentTool = nil
         s.lastActivity = Date()
         onAutoExpand?()
+        soundManager?.play(.stopFailure)
         debugLog("handleStopFailure: error=\(e.error) details=\(e.errorDetails ?? "nil")")
     }
 
@@ -223,12 +230,14 @@ final class SessionManager: ObservableObject {
         s.currentTool = nil
         s.lastActivity = Date()
         onAutoExpand?()
+        soundManager?.play(.stop)
         // Do NOT remove here — Stop fires after every response, not just at session end.
         // SessionEnd handles removal when the user actually exits claude.
     }
 
     private func handleSessionEnd(_ e: SessionEndEvent) {
         // User exited claude — remove after a brief delay so "Done" is readable.
+        soundManager?.play(.sessionEnd)
         Task {
             try? await Task.sleep(for: .seconds(5))
             sessions.removeAll { $0.id == e.sessionId }
@@ -256,6 +265,7 @@ final class SessionManager: ObservableObject {
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle
+        soundManager?.play(.approve)
         scheduleAutoCollapse()
     }
 
@@ -266,6 +276,7 @@ final class SessionManager: ObservableObject {
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle
+        soundManager?.play(.deny)
         scheduleAutoCollapse()
     }
 

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2F9207D26D30757C2A8E98EF /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACC86E20AA39EA09983E26A /* SessionRowView.swift */; };
+		411310BA5683CACFC5595FC2 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C85C0FD9BCD5F043FAB1B0E /* SoundManager.swift */; };
 		46BB371B5A4B145A80515E19 /* NotchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C13AAD262B3CDDD07B05501 /* NotchWindowController.swift */; };
 		92945122E98097B2B1A86351 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFBE54FF1B1636C050200165 /* Assets.xcassets */; };
 		9CE78737233CA569F7F63D73 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE47FFB343A580FBEFC2C7B0 /* AppDelegate.swift */; };
@@ -15,6 +16,7 @@
 		BDA3351E763B0BC4C7C12E24 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8E0D57B57BA11EB8065CD1 /* main.swift */; };
 		BDF30DFABBD57B28C94BD67D /* HookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596420CF0DB64168E7E7AA05 /* HookInstaller.swift */; };
 		BE1FDD0178A03059E1FA3D44 /* NotchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0548E445B8068EB0F91C0E55 /* NotchContentView.swift */; };
+		C1B647E0F2510DFA01C5A495 /* BuddyArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A9847D9063B09306A46AB5B /* BuddyArt.swift */; };
 		C7B2BC78320750AE0F4FF3CB /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E737419728991C3F18BE38 /* Session.swift */; };
 		D2015570780D1105927AA5A5 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308561B660F3FA742C46EC03 /* SessionManager.swift */; };
 		F0A2912E231992810D5D12A0 /* HookEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3A1884265334D9436B3D3D /* HookEvent.swift */; };
@@ -36,6 +38,8 @@
 /* Begin PBXFileReference section */
 		0548E445B8068EB0F91C0E55 /* NotchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchContentView.swift; sourceTree = "<group>"; };
 		0ADE82F193B993E5FE906CD7 /* ClawIslandApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClawIslandApp.swift; sourceTree = "<group>"; };
+		1A9847D9063B09306A46AB5B /* BuddyArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuddyArt.swift; sourceTree = "<group>"; };
+		1C85C0FD9BCD5F043FAB1B0E /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
 		261DCC8B0F496084F068F12D /* ClawIsland.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClawIsland.entitlements; sourceTree = "<group>"; };
 		308561B660F3FA742C46EC03 /* SessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
 		3ACC86E20AA39EA09983E26A /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
@@ -98,6 +102,7 @@
 		46F9D35CAA9FF697A80C82D8 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				1A9847D9063B09306A46AB5B /* BuddyArt.swift */,
 				BA3A1884265334D9436B3D3D /* HookEvent.swift */,
 				67E737419728991C3F18BE38 /* Session.swift */,
 			);
@@ -128,6 +133,7 @@
 				596420CF0DB64168E7E7AA05 /* HookInstaller.swift */,
 				308561B660F3FA742C46EC03 /* SessionManager.swift */,
 				BA55D9D6C83B586FE6F46EC5 /* SocketServer.swift */,
+				1C85C0FD9BCD5F043FAB1B0E /* SoundManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -246,6 +252,7 @@
 			files = (
 				9CE78737233CA569F7F63D73 /* AppDelegate.swift in Sources */,
 				FBC50D2A60B14DEDC8505D1B /* ApprovalView.swift in Sources */,
+				C1B647E0F2510DFA01C5A495 /* BuddyArt.swift in Sources */,
 				FA407B1DC12BB5051E9AFAB3 /* ClawIslandApp.swift in Sources */,
 				F0A2912E231992810D5D12A0 /* HookEvent.swift in Sources */,
 				BDF30DFABBD57B28C94BD67D /* HookInstaller.swift in Sources */,
@@ -255,6 +262,7 @@
 				D2015570780D1105927AA5A5 /* SessionManager.swift in Sources */,
 				2F9207D26D30757C2A8E98EF /* SessionRowView.swift in Sources */,
 				F734E70BBC66DFB6646C60A7 /* SocketServer.swift in Sources */,
+				411310BA5683CACFC5595FC2 /* SoundManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

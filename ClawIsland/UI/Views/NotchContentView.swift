@@ -226,21 +226,41 @@ private struct AgentIcon: View {
     let hasApproval: Bool
     let hasSessions: Bool
     @State private var pulse = false
+    @State private var frame = 0
+
+    // Claude Code 吉祥物，3 帧行走动画，腿部交替
+    private let frames: [[String]] = [
+        [" ▐▛███▜▌",
+         "▝▜█████▛▘",
+         "  ▘▘ ▝▝ "],   // 双腿落地
+        [" ▐▛███▜▌",
+         "▝▜█████▛▘",
+         "  ▝▘ ▘▝ "],   // 交替 A
+        [" ▐▛███▜▌",
+         "▝▜█████▛▘",
+         "  ▘▝ ▝▘ "],   // 交替 B
+    ]
 
     var body: some View {
         ZStack {
             if hasApproval {
                 Circle()
                     .fill(Color.orange.opacity(pulse ? 0.28 : 0))
-                    .frame(width: 18, height: 18)
+                    .blur(radius: 4)
+                    .frame(width: 22, height: 22)
             }
-            Image(systemName: hasApproval ? "exclamationmark.shield.fill" : "waveform")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(hasApproval ? Color.orange : Color.white.opacity(0.55))
-                .symbolEffect(.variableColor.iterative.dimInactiveLayers,
-                              isActive: hasSessions && !hasApproval)
+
+            Text(frames[frame].joined(separator: "\n"))
+                .font(.system(size: 7, design: .monospaced))
+                .foregroundStyle(
+                    hasApproval
+                        ? Color.orange
+                        : (hasSessions ? Color.white.opacity(0.85) : Color.white.opacity(0.35))
+                )
+                .animation(.easeInOut(duration: 0.1), value: frame)
+                .fixedSize()
         }
-        .frame(width: 18, height: 18)
+        .frame(width: 48, height: 32)
         .task(id: hasApproval) {
             if hasApproval {
                 withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
@@ -248,6 +268,13 @@ private struct AgentIcon: View {
                 }
             } else {
                 withAnimation { pulse = false }
+            }
+        }
+        .task(id: hasSessions) {
+            while !Task.isCancelled {
+                let ns: UInt64 = hasSessions ? 350_000_000 : 1_200_000_000
+                try? await Task.sleep(nanoseconds: ns)
+                frame = (frame + 1) % 3
             }
         }
         .animation(.spring(response: 0.3), value: hasApproval)
