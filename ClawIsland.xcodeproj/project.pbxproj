@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2F9207D26D30757C2A8E98EF /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACC86E20AA39EA09983E26A /* SessionRowView.swift */; };
+		3C0647C9F73E525C6637B1B9 /* BuddyPixels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F10710FC06499BECADAAF55 /* BuddyPixels.swift */; };
 		411310BA5683CACFC5595FC2 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C85C0FD9BCD5F043FAB1B0E /* SoundManager.swift */; };
 		46BB371B5A4B145A80515E19 /* NotchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C13AAD262B3CDDD07B05501 /* NotchWindowController.swift */; };
 		92945122E98097B2B1A86351 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFBE54FF1B1636C050200165 /* Assets.xcassets */; };
@@ -43,6 +44,7 @@
 		261DCC8B0F496084F068F12D /* ClawIsland.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClawIsland.entitlements; sourceTree = "<group>"; };
 		308561B660F3FA742C46EC03 /* SessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
 		3ACC86E20AA39EA09983E26A /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
+		4F10710FC06499BECADAAF55 /* BuddyPixels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuddyPixels.swift; sourceTree = "<group>"; };
 		596420CF0DB64168E7E7AA05 /* HookInstaller.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookInstaller.swift; sourceTree = "<group>"; };
 		67E737419728991C3F18BE38 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		7A8E0D57B57BA11EB8065CD1 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -103,6 +105,7 @@
 			isa = PBXGroup;
 			children = (
 				1A9847D9063B09306A46AB5B /* BuddyArt.swift */,
+				4F10710FC06499BECADAAF55 /* BuddyPixels.swift */,
 				BA3A1884265334D9436B3D3D /* HookEvent.swift */,
 				67E737419728991C3F18BE38 /* Session.swift */,
 			);
@@ -253,6 +256,7 @@
 				9CE78737233CA569F7F63D73 /* AppDelegate.swift in Sources */,
 				FBC50D2A60B14DEDC8505D1B /* ApprovalView.swift in Sources */,
 				C1B647E0F2510DFA01C5A495 /* BuddyArt.swift in Sources */,
+				3C0647C9F73E525C6637B1B9 /* BuddyPixels.swift in Sources */,
 				FA407B1DC12BB5051E9AFAB3 /* ClawIslandApp.swift in Sources */,
 				F0A2912E231992810D5D12A0 /* HookEvent.swift in Sources */,
 				BDF30DFABBD57B28C94BD67D /* HookInstaller.swift in Sources */,
