@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         sessionManager = SessionManager()
+        sessionManager.soundManager = SoundManager()
         notchWindowController = NotchWindowController(sessionManager: sessionManager)
         notchWindowController?.showWindow(nil)
 

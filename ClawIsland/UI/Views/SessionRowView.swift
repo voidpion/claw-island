@@ -117,6 +117,7 @@ struct SessionRowView: View {
 private struct SessionAvatar: View {
     @ObservedObject var session: Session
     @State private var pulse = false
+    @State private var frame = 0
 
     private var statusColor: Color {
         switch session.status {
@@ -137,31 +138,25 @@ private struct SessionAvatar: View {
     }
 
     var body: some View {
+        let lines = BuddyArt.frames[session.buddyIndex][frame]
+
         ZStack {
-            // Pulsing halo for active states
+            // 仅 active 状态保留一个模糊光晕，无矩形框
             if isActive {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(statusColor.opacity(pulse ? 0.22 : 0))
-                    .frame(width: 34, height: 34)
+                Circle()
+                    .fill(statusColor.opacity(pulse ? 0.18 : 0))
+                    .blur(radius: 5)
+                    .frame(width: 32, height: 32)
             }
 
-            // Background
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(Color.white.opacity(0.06))
-                .frame(width: 28, height: 28)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .strokeBorder(statusColor.opacity(0.6), lineWidth: 1.5)
-                )
-
-            // Icon
-            Image(systemName: iconName)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(statusColor)
-                .symbolEffect(.variableColor.iterative.dimInactiveLayers,
-                              isActive: isActive)
+            // ASCII buddy — 4 行 monospaced
+            Text(lines.joined(separator: "\n"))
+                .font(.system(size: 7, design: .monospaced))
+                .foregroundStyle(statusColor.opacity(0.9))
+                .fixedSize()
+                .animation(.easeInOut(duration: 0.12), value: frame)
         }
-        .frame(width: 34, height: 34)
+        .frame(width: 38, height: 42)
         .task(id: isActive) {
             if isActive {
                 withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
@@ -171,20 +166,16 @@ private struct SessionAvatar: View {
                 withAnimation { pulse = false }
             }
         }
+        .task {
+            while !Task.isCancelled {
+                let interval: UInt64 = isActive ? 600_000_000 : 1_400_000_000
+                try? await Task.sleep(nanoseconds: interval)
+                frame = (frame + 1) % 3
+            }
+        }
         .animation(.spring(response: 0.3), value: session.status.discriminator)
     }
 
-    private var iconName: String {
-        switch session.status {
-        case .idle:            return "waveform"
-        case .running:         return "bolt.fill"
-        case .waitingApproval: return "exclamationmark.shield.fill"
-        case .notifying:       return "bell.fill"
-        case .compacting:      return "arrow.triangle.2.circlepath"
-        case .completed:       return "checkmark"
-        case .failed:          return "xmark"
-        }
-    }
 }
 
 // MARK: - Discriminator for animation keying
