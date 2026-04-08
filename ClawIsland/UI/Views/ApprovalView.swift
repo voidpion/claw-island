@@ -84,10 +84,10 @@ struct ApprovalView: View {
 
         switch event.toolName {
         case "Bash":
-            // Show just the command
-            if let cmd = input["command"]?.description {
-                return cmd.prefix(300).description
-            }
+            var parts: [String] = []
+            if let desc = input["description"]?.description { parts.append(desc) }
+            if let cmd  = input["command"]?.description     { parts.append(String(cmd.prefix(300))) }
+            if !parts.isEmpty { return parts.joined(separator: "\n") }
         case "Read":
             // Show file path only
             if let path = input["file_path"]?.description {

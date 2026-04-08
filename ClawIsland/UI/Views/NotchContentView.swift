@@ -91,7 +91,7 @@ struct NotchContentView: View {
             .background(GeometryReader { geo in
                 Color.clear.preference(
                     key: CollapsedWidthKey.self,
-                    value: max(geo.size.width + edgePad * 2, 46)
+                    value: max(geo.size.width + edgePad * 2, 54 + edgePad * 2)
                 )
             })
             .frame(maxWidth: .infinity)
@@ -241,7 +241,7 @@ private struct AgentIcon: View {
                 .frame(width: 54, height: 18)
                 .animation(.easeInOut(duration: 0.1), value: frame)
         }
-        .frame(width: 48, height: 32)
+        .frame(width: 54, height: 32)
         .task(id: hasApproval) {
             if hasApproval {
                 withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
