@@ -119,9 +119,11 @@ private struct SessionAvatar: View {
     @State private var pulse = false
     @State private var frame = 0
 
+    private var charIndex: Int { session.buddyIndex }
+
     private var statusColor: Color {
         switch session.status {
-        case .idle:            return .white.opacity(0.2)
+        case .idle:            return .white.opacity(0.35)
         case .running:         return Color(red: 0.35, green: 0.6, blue: 1.0)
         case .waitingApproval: return .orange
         case .notifying:       return Color(red: 0.7, green: 0.4, blue: 1.0)
@@ -138,44 +140,62 @@ private struct SessionAvatar: View {
     }
 
     var body: some View {
-        let lines = BuddyArt.frames[session.buddyIndex][frame]
-
         ZStack {
-            // 仅 active 状态保留一个模糊光晕
-            if isActive {
-                Circle()
-                    .fill(statusColor.opacity(pulse ? 0.18 : 0))
-                    .blur(radius: 5)
-                    .frame(width: 32, height: 32)
-            }
+            // 光晕 — 像素图形状的模糊副本，active 时呼吸
+            BuddyCanvas(charIndex: charIndex, frame: frame, color: statusColor)
+                .frame(width: 24, height: 24)
+                .blur(radius: pulse ? 10 : 5)
+                .opacity(pulse ? 1.0 : (isActive ? 0.6 : 0.3))
+                .scaleEffect(pulse ? 1.3 : 1.0)
 
-            // ASCII buddy — 4 行 monospaced
-            Text(lines.joined(separator: "\n"))
-                .font(.system(size: 7, design: .monospaced))
-                .foregroundStyle(statusColor.opacity(0.9))
-                .fixedSize()
-                .animation(.easeInOut(duration: 0.12), value: frame)
+            // 精灵本体
+            BuddyCanvas(charIndex: charIndex, frame: frame, color: statusColor)
+                .frame(width: 24, height: 24)
         }
-        .frame(width: 44, height: 44)
+        .frame(width: 32, height: 32)
         .task(id: isActive) {
             if isActive {
-                withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
+                withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
                     pulse = true
                 }
             } else {
-                withAnimation { pulse = false }
+                withAnimation(.easeOut(duration: 0.4)) { pulse = false }
             }
         }
         .task {
             while !Task.isCancelled {
-                let interval: UInt64 = isActive ? 600_000_000 : 1_400_000_000
-                try? await Task.sleep(nanoseconds: interval)
+                try? await Task.sleep(nanoseconds: isActive ? 500_000_000 : 1_200_000_000)
                 frame = (frame + 1) % 3
             }
         }
         .animation(.spring(response: 0.3), value: session.status.discriminator)
     }
+}
 
+// MARK: - Pixel sprite canvas
+
+private struct BuddyCanvas: View {
+    let charIndex: Int
+    let frame: Int
+    let color: Color
+
+    var body: some View {
+        Canvas { context, size in
+            guard charIndex < BuddyPixels.frames.count,
+                  frame < BuddyPixels.frames[charIndex].count else { return }
+            let frameData = BuddyPixels.frames[charIndex][frame]
+            let pw = size.width  / CGFloat(BuddyPixels.cols)
+            let ph = size.height / CGFloat(BuddyPixels.rows)
+            for (row, mask) in frameData.enumerated() {
+                for col in 0..<BuddyPixels.cols {
+                    guard (mask >> UInt8(7 - col)) & 1 == 1 else { continue }
+                    let rect = CGRect(x: CGFloat(col) * pw, y: CGFloat(row) * ph,
+                                     width: pw, height: ph)
+                    context.fill(Path(rect), with: .color(color))
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Discriminator for animation keying

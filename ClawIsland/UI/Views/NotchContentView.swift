@@ -228,37 +228,18 @@ private struct AgentIcon: View {
     @State private var pulse = false
     @State private var frame = 0
 
-    // Claude Code 吉祥物，3 帧行走动画，腿部交替
-    private let frames: [[String]] = [
-        [" ▐▛███▜▌",
-         "▝▜█████▛▘",
-         "  ▘▘ ▝▝ "],   // 双腿落地
-        [" ▐▛███▜▌",
-         "▝▜█████▛▘",
-         "  ▝▘ ▘▝ "],   // 交替 A
-        [" ▐▛███▜▌",
-         "▝▜█████▛▘",
-         "  ▘▝ ▝▘ "],   // 交替 B
-    ]
+    private var iconColor: Color {
+        hasApproval
+            ? Color.orange
+            : (hasSessions ? Color.white.opacity(0.85) : Color.white.opacity(0.35))
+    }
 
     var body: some View {
         ZStack {
-            if hasApproval {
-                Circle()
-                    .fill(Color.orange.opacity(pulse ? 0.28 : 0))
-                    .blur(radius: 4)
-                    .frame(width: 22, height: 22)
-            }
-
-            Text(frames[frame].joined(separator: "\n"))
-                .font(.system(size: 7, design: .monospaced))
-                .foregroundStyle(
-                    hasApproval
-                        ? Color.orange
-                        : (hasSessions ? Color.white.opacity(0.85) : Color.white.opacity(0.35))
-                )
+            // 本体：54/18=3pt/pixel，整数对齐无缝隙
+            MascotCanvas(frame: frame, color: iconColor)
+                .frame(width: 54, height: 18)
                 .animation(.easeInOut(duration: 0.1), value: frame)
-                .fixedSize()
         }
         .frame(width: 48, height: 32)
         .task(id: hasApproval) {
@@ -278,6 +259,41 @@ private struct AgentIcon: View {
             }
         }
         .animation(.spring(response: 0.3), value: hasApproval)
+    }
+}
+
+// MARK: - Mascot Canvas
+
+private struct MascotCanvas: View {
+    let frame: Int
+    let color: Color
+
+    private static let cols = 18
+    private static let rows = 6
+
+    // 3帧像素数据，18列 × 6行，UInt32 bitmask，bit17 = 最左列
+    // 源自块字符：行0-1=头部，行2-3=身体，行4-5=腿（帧间交替）
+    private static let frames: [[UInt32]] = [
+        [0x7FF8, 0x6FD8, 0x1FFFE, 0x7FF8, 0x2850, 0],  // 帧0：双腿落地 ▘▘ ▝▝
+        [0x7FF8, 0x6FD8, 0x1FFFE, 0x7FF8, 0x1890, 0],  // 帧1：交替 A   ▝▘ ▘▝
+        [0x7FF8, 0x6FD8, 0x1FFFE, 0x7FF8, 0x2460, 0],  // 帧2：交替 B   ▘▝ ▝▘
+    ]
+
+    var body: some View {
+        Canvas { context, size in
+            guard frame < MascotCanvas.frames.count else { return }
+            let rowData = MascotCanvas.frames[frame]
+            let pw = size.width  / CGFloat(MascotCanvas.cols)
+            let ph = size.height / CGFloat(MascotCanvas.rows)
+            for (row, mask) in rowData.enumerated() {
+                for col in 0..<MascotCanvas.cols {
+                    guard (mask >> UInt32(17 - col)) & 1 == 1 else { continue }
+                    let rect = CGRect(x: CGFloat(col) * pw, y: CGFloat(row) * ph,
+                                     width: pw, height: ph)
+                    context.fill(Path(rect), with: .color(color))
+                }
+            }
+        }
     }
 }
 
