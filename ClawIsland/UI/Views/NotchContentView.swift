@@ -91,7 +91,7 @@ struct NotchContentView: View {
             .background(GeometryReader { geo in
                 Color.clear.preference(
                     key: CollapsedWidthKey.self,
-                    value: max(geo.size.width + edgePad * 2, 54 + edgePad * 2)
+                    value: max(geo.size.width + edgePad * 2, 36 + edgePad * 2)
                 )
             })
             .frame(maxWidth: .infinity)
@@ -236,12 +236,12 @@ private struct AgentIcon: View {
 
     var body: some View {
         ZStack {
-            // 本体：54/18=3pt/pixel，整数对齐无缝隙
+            // 本体：pw=2pt, ph=4pt（1:2比例，还原终端字符宽高）
             MascotCanvas(frame: frame, color: iconColor)
-                .frame(width: 54, height: 18)
+                .frame(width: 36, height: 24)
                 .animation(.easeInOut(duration: 0.1), value: frame)
         }
-        .frame(width: 54, height: 32)
+        .frame(width: 36, height: 32)
         .task(id: hasApproval) {
             if hasApproval {
                 withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
