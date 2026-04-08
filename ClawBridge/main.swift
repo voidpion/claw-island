@@ -86,6 +86,9 @@ if isPermissionEvent {
         if let perms = response.updatedPermissions?.value {
             decisionObj["updatedPermissions"] = perms
         }
+        if let answers = response.answers {
+            decisionObj["answers"] = answers
+        }
         let stdoutObj: [String: Any] = [
             "hookSpecificOutput": [
                 "hookEventName": "PermissionRequest",
@@ -163,8 +166,9 @@ func readExact(sock: Int32, buf: inout [UInt8], count: Int) -> Bool {
 }
 
 struct BridgeResponse: Decodable {
-    let decision: String   // "allow" | "deny"
+    let decision: String              // "allow" | "deny"
     let updatedPermissions: AnyJSON?  // arbitrary JSON array
+    let answers: [String: String]?    // AskUserQuestion 答案
 }
 
 /// Wraps arbitrary JSON for Codable — used to pass updatedPermissions through.

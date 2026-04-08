@@ -258,10 +258,10 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Approval (called from UI)
 
-    func approve(session: Session, updatedPermissions: [JSONValue]? = nil) {
+    func approve(session: Session, updatedPermissions: [JSONValue]? = nil, answers: [String: String]? = nil) {
         NSLog("[ClawIsland] approve called — continuation present: %d, updatedPermissions: %d", session.pendingApprovalContinuation != nil ? 1 : 0, updatedPermissions != nil ? 1 : 0)
         session.pendingApprovalContinuation?.resume(
-            returning: HookResponse(decision: .allow, reason: nil, updatedPermissions: updatedPermissions)
+            returning: HookResponse(decision: .allow, reason: nil, updatedPermissions: updatedPermissions, answers: answers)
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle
@@ -272,7 +272,7 @@ final class SessionManager: ObservableObject {
     func deny(session: Session, reason: String? = nil) {
         NSLog("[ClawIsland] deny called — continuation present: %d", session.pendingApprovalContinuation != nil ? 1 : 0)
         session.pendingApprovalContinuation?.resume(
-            returning: HookResponse(decision: .deny, reason: reason, updatedPermissions: nil)
+            returning: HookResponse(decision: .deny, reason: reason, updatedPermissions: nil, answers: nil)
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle

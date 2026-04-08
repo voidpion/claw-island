@@ -373,6 +373,7 @@ struct HookResponse: Codable, Sendable {
     let decision: Decision
     let reason: String?
     let updatedPermissions: [JSONValue]?
+    let answers: [String: String]?
 }
 
 // MARK: - JSONValue  (arbitrary JSON, avoids Any)
