@@ -76,7 +76,8 @@ struct NotchContentView: View {
         return HStack(spacing: 0) {
             // 左翼：AgentIcon 居中
             AgentIcon(hasApproval: hasApprovalPending,
-                      hasSessions: !sessionManager.sessions.isEmpty)
+                      hasSessions: !sessionManager.sessions.isEmpty,
+                      expanded: viewModel.expanded)
                 .frame(maxWidth: .infinity)
 
             // 硬件 notch 占位
@@ -225,8 +226,18 @@ private struct NotchPillShape: Shape & InsettableShape {
 private struct AgentIcon: View {
     let hasApproval: Bool
     let hasSessions: Bool
-    @State private var pulse = false
+    let expanded: Bool
+
     @State private var frame = 0
+    @State private var patrolOffset: CGFloat = 0
+    @State private var facingRight  = true
+    @State private var availableWidth: CGFloat = 36
+
+    // 巡逻最大偏移：图标边缘与容器边缘保持 edgePad(14pt) 对齐
+    // maxPatrol = availableWidth/2 - mascotWidth/2 - edgePad = availableWidth/2 - 18 - 14
+    private var maxPatrol: CGFloat {
+        max(0, availableWidth / 2 - 32)
+    }
 
     private var iconColor: Color {
         hasApproval
@@ -235,25 +246,50 @@ private struct AgentIcon: View {
     }
 
     var body: some View {
-        ZStack {
-            // 本体：pw=2pt, ph=4pt（1:2比例，还原终端字符宽高）
+        // GeometryReader 填满父级宽度（外部 .frame(maxWidth:.infinity) 决定）
+        GeometryReader { geo in
             MascotCanvas(frame: frame, color: iconColor)
                 .frame(width: 36, height: 24)
-                .animation(.easeInOut(duration: 0.1), value: frame)
+                .scaleEffect(x: facingRight ? 1 : -1, y: 1)  // 面朝行进方向
+                .frame(width: 36, height: 32)
+                .position(x: geo.size.width / 2 + patrolOffset, y: 16)
+                .onAppear { availableWidth = geo.size.width }
+                .onChange(of: geo.size.width) { _, w in availableWidth = w }
         }
-        .frame(width: 36, height: 32)
-        .task(id: hasApproval) {
-            if hasApproval {
-                withAnimation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true)) {
-                    pulse = true
+        .frame(height: 32)
+        // 巡逻任务：expanded & !hasApproval 时来回走，否则回中心
+        .task(id: "\(expanded)_\(hasApproval)") {
+            guard expanded && !hasApproval else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.72)) {
+                    patrolOffset = 0
                 }
-            } else {
-                withAnimation { pulse = false }
+                return
+            }
+            // 等 GeometryReader 上报实际宽度
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            while !Task.isCancelled {
+                guard maxPatrol > 2 else {
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                    continue
+                }
+                let target: CGFloat = facingRight ? maxPatrol : -maxPatrol
+                let distance = abs(target - patrolOffset)
+                let duration = max(0.3, Double(distance) / 22.0)  // 22pt/s 匀速步行
+                withAnimation(.linear(duration: duration)) {
+                    patrolOffset = target
+                }
+                try? await Task.sleep(nanoseconds: UInt64(duration * 1_000_000_000))
+                guard !Task.isCancelled else { break }
+                try? await Task.sleep(nanoseconds: 240_000_000)   // 边缘停顿
+                guard !Task.isCancelled else { break }
+                facingRight.toggle()
             }
         }
-        .task(id: hasSessions) {
+        // 帧动画：展开时加快腿部步频
+        .task(id: "\(hasSessions)_\(expanded)") {
             while !Task.isCancelled {
-                let ns: UInt64 = hasSessions ? 350_000_000 : 1_200_000_000
+                let ns: UInt64 = !hasSessions ? 1_200_000_000
+                    : (expanded ? 220_000_000 : 380_000_000)
                 try? await Task.sleep(nanoseconds: ns)
                 frame = (frame + 1) % 3
             }
