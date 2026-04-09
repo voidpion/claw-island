@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var notchWindowController: NotchWindowController?
+    private var settingsWindowController: SettingsWindowController?
     private var sessionManager: SessionManager!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -12,8 +13,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         sessionManager = SessionManager()
         sessionManager.soundManager = SoundManager()
         notchWindowController = NotchWindowController(sessionManager: sessionManager)
-        notchWindowController?.showWindow(nil)
 
+        settingsWindowController = SettingsWindowController()
+        notchWindowController?.onOpenSettings = { [weak self] in
+            self?.settingsWindowController?.toggleSettings()
+        }
+
+        notchWindowController?.showWindow(nil)
         installBridgeIfNeeded()
     }
 

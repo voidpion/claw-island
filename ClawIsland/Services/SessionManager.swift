@@ -267,7 +267,7 @@ final class SessionManager: ObservableObject {
             returning: HookResponse(decision: .allow, reason: nil, updatedPermissions: updatedPermissions, answers: answers)
         )
         session.pendingApprovalContinuation = nil
-        session.status = .idle
+        session.status = .running(toolName: session.currentTool ?? "thinking")
         advanceActiveApproval(resolved: session.id)
         soundManager?.play(.approve)
         scheduleAutoCollapse()
@@ -279,7 +279,7 @@ final class SessionManager: ObservableObject {
             returning: HookResponse(decision: .deny, reason: reason, updatedPermissions: nil, answers: nil)
         )
         session.pendingApprovalContinuation = nil
-        session.status = .idle
+        session.status = .running(toolName: session.currentTool ?? "thinking")
         advanceActiveApproval(resolved: session.id)
         soundManager?.play(.deny)
         scheduleAutoCollapse()

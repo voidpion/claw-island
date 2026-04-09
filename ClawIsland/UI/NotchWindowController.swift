@@ -10,12 +10,14 @@ final class NotchViewModel: ObservableObject {
     @Published var collapsedHeight: CGFloat = 32 // real notch height; updated from safeAreaInsets
     @Published var notchWidth: CGFloat = 0       // hardware notch width; 0 on non-notch screens
     @Published var collapsedContentWidth: CGFloat = 220  // measured by SwiftUI, auto-sized
+    var onOpenSettings: (() -> Void)?
 }
 
 @MainActor
 final class NotchWindowController: NSWindowController {
     private let sessionManager: SessionManager
     let viewModel = NotchViewModel()
+    var onOpenSettings: (() -> Void)?
 
     private var cancellables = Set<AnyCancellable>()
     private var collapseTask: Task<Void, Never>?
@@ -41,10 +43,12 @@ final class NotchWindowController: NSWindowController {
         let window = NotchWindow()
         super.init(window: window)
 
-        notchScreen = Self.findNotchScreen()
+        notchScreen = AppSettings.shared.resolveScreen()
         updateNotchGeometry()
         setupContentView()
         positionOnNotch(animated: false)
+
+        viewModel.onOpenSettings = { [weak self] in self?.onOpenSettings?() }
 
         // Force-expand for permission requests and notifications
         sessionManager.onAutoExpand = { [weak self] in
@@ -110,9 +114,19 @@ final class NotchWindowController: NSWindowController {
         NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
-                self?.notchScreen = Self.findNotchScreen()
+                self?.notchScreen = AppSettings.shared.resolveScreen()
                 self?.updateNotchGeometry()
                 self?.positionOnNotch(animated: false)
+            }
+            .store(in: &cancellables)
+
+        // 用户更改屏幕偏好时重新定位
+        AppSettings.shared.$preferredScreenName
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.notchScreen = AppSettings.shared.resolveScreen()
+                self?.updateNotchGeometry()
+                self?.positionOnNotch(animated: true)
             }
             .store(in: &cancellables)
     }
@@ -258,14 +272,6 @@ final class NotchWindowController: NSWindowController {
         }
     }
 
-    // MARK: - Screen detection
-
-    private static func findNotchScreen() -> NSScreen? {
-        // Prefer built-in display with hardware notch (safeAreaInsets.top > 0)
-        NSScreen.screens.first { $0.safeAreaInsets.top > 0 }
-            ?? NSScreen.screens.first { $0.localizedName.lowercased().contains("built-in") }
-            ?? NSScreen.main
-    }
 }
 
 // MARK: - NotchWindow

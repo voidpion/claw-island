@@ -8,10 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		2F9207D26D30757C2A8E98EF /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ACC86E20AA39EA09983E26A /* SessionRowView.swift */; };
+		38DFA8E398D344460AB50198 /* SettingsWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03C4EFADB8479979FDBAA349 /* SettingsWindowController.swift */; };
 		3C0647C9F73E525C6637B1B9 /* BuddyPixels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F10710FC06499BECADAAF55 /* BuddyPixels.swift */; };
 		411310BA5683CACFC5595FC2 /* SoundManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C85C0FD9BCD5F043FAB1B0E /* SoundManager.swift */; };
+		4308CC044904E588F11EF71E /* SettingsContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2530F9DDFC0FEA2037E32238 /* SettingsContentView.swift */; };
 		46BB371B5A4B145A80515E19 /* NotchWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C13AAD262B3CDDD07B05501 /* NotchWindowController.swift */; };
 		92945122E98097B2B1A86351 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFBE54FF1B1636C050200165 /* Assets.xcassets */; };
+		9A05E413F7770634D2A70221 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8682FC31FC648EF837240A54 /* AppSettings.swift */; };
 		9CE78737233CA569F7F63D73 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE47FFB343A580FBEFC2C7B0 /* AppDelegate.swift */; };
 		AC539128565B734EB2DFCE35 /* ClawBridge in Resources */ = {isa = PBXBuildFile; fileRef = B6DC4ECB30C6ABED113600E4 /* ClawBridge */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BDA3351E763B0BC4C7C12E24 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8E0D57B57BA11EB8065CD1 /* main.swift */; };
@@ -37,10 +40,12 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		03C4EFADB8479979FDBAA349 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		0548E445B8068EB0F91C0E55 /* NotchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchContentView.swift; sourceTree = "<group>"; };
 		0ADE82F193B993E5FE906CD7 /* ClawIslandApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClawIslandApp.swift; sourceTree = "<group>"; };
 		1A9847D9063B09306A46AB5B /* BuddyArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuddyArt.swift; sourceTree = "<group>"; };
 		1C85C0FD9BCD5F043FAB1B0E /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
+		2530F9DDFC0FEA2037E32238 /* SettingsContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsContentView.swift; sourceTree = "<group>"; };
 		261DCC8B0F496084F068F12D /* ClawIsland.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClawIsland.entitlements; sourceTree = "<group>"; };
 		308561B660F3FA742C46EC03 /* SessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionManager.swift; sourceTree = "<group>"; };
 		3ACC86E20AA39EA09983E26A /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
@@ -49,6 +54,7 @@
 		67E737419728991C3F18BE38 /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		7A8E0D57B57BA11EB8065CD1 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		7C13AAD262B3CDDD07B05501 /* NotchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchWindowController.swift; sourceTree = "<group>"; };
+		8682FC31FC648EF837240A54 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		B6DC4ECB30C6ABED113600E4 /* ClawBridge */ = {isa = PBXFileReference; includeInIndex = 0; path = ClawBridge; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA3A1884265334D9436B3D3D /* HookEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookEvent.swift; sourceTree = "<group>"; };
 		BA55D9D6C83B586FE6F46EC5 /* SocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketServer.swift; sourceTree = "<group>"; };
@@ -64,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				7C13AAD262B3CDDD07B05501 /* NotchWindowController.swift */,
+				03C4EFADB8479979FDBAA349 /* SettingsWindowController.swift */,
 				391C3D19106E4225E434089E /* Views */,
 			);
 			path = UI;
@@ -85,6 +92,7 @@
 				FC3D8CC7F0BEBF0DCA129EEF /* ApprovalView.swift */,
 				0548E445B8068EB0F91C0E55 /* NotchContentView.swift */,
 				3ACC86E20AA39EA09983E26A /* SessionRowView.swift */,
+				2530F9DDFC0FEA2037E32238 /* SettingsContentView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -133,6 +141,7 @@
 		E375644A0CC7E4B82FADBCB1 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				8682FC31FC648EF837240A54 /* AppSettings.swift */,
 				596420CF0DB64168E7E7AA05 /* HookInstaller.swift */,
 				308561B660F3FA742C46EC03 /* SessionManager.swift */,
 				BA55D9D6C83B586FE6F46EC5 /* SocketServer.swift */,
@@ -254,6 +263,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9CE78737233CA569F7F63D73 /* AppDelegate.swift in Sources */,
+				9A05E413F7770634D2A70221 /* AppSettings.swift in Sources */,
 				FBC50D2A60B14DEDC8505D1B /* ApprovalView.swift in Sources */,
 				C1B647E0F2510DFA01C5A495 /* BuddyArt.swift in Sources */,
 				3C0647C9F73E525C6637B1B9 /* BuddyPixels.swift in Sources */,
@@ -265,6 +275,8 @@
 				C7B2BC78320750AE0F4FF3CB /* Session.swift in Sources */,
 				D2015570780D1105927AA5A5 /* SessionManager.swift in Sources */,
 				2F9207D26D30757C2A8E98EF /* SessionRowView.swift in Sources */,
+				4308CC044904E588F11EF71E /* SettingsContentView.swift in Sources */,
+				38DFA8E398D344460AB50198 /* SettingsWindowController.swift in Sources */,
 				F734E70BBC66DFB6646C60A7 /* SocketServer.swift in Sources */,
 				411310BA5683CACFC5595FC2 /* SoundManager.swift in Sources */,
 			);
