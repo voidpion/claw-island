@@ -109,6 +109,7 @@ struct NotchContentView: View {
     private var expandedPanel: some View {
         let topPad: CGFloat = 10
         let botPad: CGFloat = 6   // 底角 br=16 视觉上已有空间感，少留一点
+        let gearReserve: CGFloat = 24  // 为右下角齿轮按钮预留空间
         return VStack(spacing: 0) {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 1) {
@@ -118,7 +119,7 @@ struct NotchContentView: View {
                     }
                 }
                 .padding(.top, topPad)
-                .padding(.bottom, botPad)
+                .padding(.bottom, botPad + gearReserve)
                 .padding(.horizontal, expandedBodyInset)
                 .background(
                     GeometryReader { geo in
@@ -134,10 +135,36 @@ struct NotchContentView: View {
             .frame(maxHeight: NotchWindowController.expandedMaxHeight
                    - viewModel.collapsedHeight)
         }
+        .overlay(alignment: .bottomTrailing) {
+            gearButton
+                .padding(.trailing, expandedBodyInset - 2)
+                .padding(.bottom, expandedBodyInset - 2)
+        }
         .onPreferenceChange(ContentHeightKey.self) { h in
             viewModel.contentHeight = h
         }
     }
+
+    // MARK: - Gear button
+
+    private var gearButton: some View {
+        Button {
+            viewModel.onOpenSettings?()
+        } label: {
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.white.opacity(gearHovered ? 0.6 : 0.25))
+                .frame(width: 22, height: 22)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovered in
+            withAnimation(.easeOut(duration: 0.12)) {
+                gearHovered = hovered
+            }
+        }
+    }
+
+    @State private var gearHovered = false
 }
 
 // MARK: - Preference keys
@@ -163,15 +190,12 @@ private struct NotchPill: View {
     private var bottomRadius: CGFloat { expanded ? 20 : 12 }
 
     var body: some View {
-        GeometryReader { geo in
-            NotchPillShape(bottomRadius: bottomRadius)
-                .fill(Color.black)
-                .overlay(
-                    NotchPillShape(bottomRadius: bottomRadius)
-                        .strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5)
-                )
-                .frame(width: geo.size.width, height: geo.size.height)
-        }
+        NotchPillShape(bottomRadius: bottomRadius)
+            .fill(Color.black)
+            .overlay(
+                NotchPillShape(bottomRadius: bottomRadius)
+                    .strokeBorder(Color.white.opacity(0.07), lineWidth: 0.5)
+            )
     }
 }
 
