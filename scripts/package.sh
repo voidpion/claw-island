@@ -24,6 +24,8 @@ xcodebuild \
     -project "$PROJECT" \
     -scheme "$SCHEME" \
     -configuration "$CONFIG" \
+    ARCHS="x86_64 arm64" \
+    ONLY_ACTIVE_ARCH=NO \
     CONFIGURATION_BUILD_DIR="$(pwd)/$BUILD_DIR" \
     CODE_SIGN_IDENTITY="-" \
     CODE_SIGNING_REQUIRED=NO \
