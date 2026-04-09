@@ -20,6 +20,9 @@ final class SocketServer: @unchecked Sendable {
     func start(onEvent: @escaping @MainActor (HookEvent) async -> HookResponse?) throws {
         self.eventHandler = onEvent
 
+        // 忽略 SIGPIPE：对端关闭连接时 write() 返回 -1/EPIPE，而不是 kill 进程
+        signal(SIGPIPE, SIG_IGN)
+
         unlink(Self.socketPath)
 
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
