@@ -11,8 +11,9 @@ struct SessionRowView: View {
                 .padding(.vertical, 8)
                 .padding(.horizontal, 10)
 
-            // Inline approval panel — inside the same card
-            if case .waitingApproval(let event) = session.status {
+            // Inline approval panel — 只有 activeApprovalId 匹配时才展开
+            if case .waitingApproval(let event) = session.status,
+               sessionManager.activeApprovalId == session.id {
                 Divider().overlay(Color.white.opacity(0.06)).padding(.horizontal, 10)
                 ApprovalView(event: event, session: session)
                     .transition(
@@ -72,8 +73,23 @@ struct SessionRowView: View {
 
             Spacer(minLength: 4)
 
-            // Right badges: model + time
+            // Right badges: queued approval indicator + model + time
             VStack(alignment: .trailing, spacing: 4) {
+                // 排队等待角标：waiting 但不是当前 active
+                if isQueuedApproval {
+                    HStack(spacing: 3) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 8))
+                        Text("待审批")
+                            .font(.system(size: 9.5, weight: .medium))
+                    }
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.orange.opacity(0.12))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().strokeBorder(Color.orange.opacity(0.3), lineWidth: 0.5))
+                }
                 if let model = session.model {
                     Text(model)
                         .font(.system(size: 9.5, weight: .medium))
@@ -106,8 +122,19 @@ struct SessionRowView: View {
         }
     }
 
+    // waiting 且是当前 active — 用于 animation keying
     private var isWaiting: Bool {
-        if case .waitingApproval = session.status { return true }
+        if case .waitingApproval = session.status {
+            return sessionManager.activeApprovalId == session.id
+        }
+        return false
+    }
+
+    // waiting 但排在队列里（非 active）
+    private var isQueuedApproval: Bool {
+        if case .waitingApproval = session.status {
+            return sessionManager.activeApprovalId != session.id
+        }
         return false
     }
 }

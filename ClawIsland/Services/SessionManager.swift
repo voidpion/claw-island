@@ -4,6 +4,8 @@ import Foundation
 @MainActor
 final class SessionManager: ObservableObject {
     @Published var sessions: [Session] = []
+    /// 当前正在展示 ApprovalView 的 session id；nil 表示无待审批
+    @Published var activeApprovalId: String?
 
     /// Controller sets this to be notified when a session needs the panel auto-expanded
     var onAutoExpand: (() -> Void)?
@@ -92,6 +94,7 @@ final class SessionManager: ObservableObject {
         let s = findOrNearest(id: e.sessionId, transcriptPath: e.transcriptPath)
         s.status = .waitingApproval(e)
         s.lastActivity = Date()
+        if activeApprovalId == nil { activeApprovalId = s.id }
         onAutoExpand?()
         soundManager?.play(.permissionRequest)
         debugLog("handlePermissionRequest: waiting for user action on session \(s.id.prefix(8))")
@@ -265,6 +268,7 @@ final class SessionManager: ObservableObject {
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle
+        advanceActiveApproval(resolved: session.id)
         soundManager?.play(.approve)
         scheduleAutoCollapse()
     }
@@ -276,8 +280,18 @@ final class SessionManager: ObservableObject {
         )
         session.pendingApprovalContinuation = nil
         session.status = .idle
+        advanceActiveApproval(resolved: session.id)
         soundManager?.play(.deny)
         scheduleAutoCollapse()
+    }
+
+    /// 解决当前 activeApprovalId 后，切换到下一个待审批 session
+    private func advanceActiveApproval(resolved id: String) {
+        guard activeApprovalId == id else { return }
+        activeApprovalId = sessions.first {
+            if case .waitingApproval = $0.status { return true }
+            return false
+        }?.id
     }
 
     /// Auto-collapse after a brief delay if no new approval is pending.
