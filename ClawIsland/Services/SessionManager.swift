@@ -98,9 +98,22 @@ final class SessionManager: ObservableObject {
         onAutoExpand?()
         soundManager?.play(.permissionRequest)
         debugLog("handlePermissionRequest: waiting for user action on session \(s.id.prefix(8))")
-        let response = await withCheckedContinuation { continuation in
-            s.pendingApprovalContinuation = continuation
-            debugLog("handlePermissionRequest: continuation stored for session \(s.id.prefix(8)), continuation present: \(s.pendingApprovalContinuation != nil)")
+        let response = await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                s.pendingApprovalContinuation = continuation
+                debugLog("handlePermissionRequest: continuation stored for session \(s.id.prefix(8)), continuation present: \(s.pendingApprovalContinuation != nil)")
+            }
+        } onCancel: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                debugLog("handlePermissionRequest: cancelled (bridge disconnected) for session \(s.id.prefix(8))")
+                s.pendingApprovalContinuation?.resume(
+                    returning: HookResponse(decision: .deny, reason: "Bridge disconnected", updatedPermissions: nil, answers: nil)
+                )
+                s.pendingApprovalContinuation = nil
+                s.status = .running(toolName: s.currentTool ?? "thinking")
+                advanceActiveApproval(resolved: s.id)
+            }
         }
         debugLog("handlePermissionRequest: got response decision=\(response.decision) for session \(s.id.prefix(8))")
         return response
@@ -108,6 +121,8 @@ final class SessionManager: ObservableObject {
 
     private func handlePreToolUse(_ e: PreToolUseEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        // 清理残留的 pending approval（bridge 断连后新事件到达）
+        resolveStaleApproval(session: s, reason: "Overtaken by new event")
         let desc = Self.toolDescription(name: e.toolName, input: e.toolInput, cwd: s.cwd)
         s.status      = .running(toolName: desc)
         s.currentTool = e.toolName
@@ -159,6 +174,7 @@ final class SessionManager: ObservableObject {
 
     private func handleUserPromptSubmit(_ e: UserPromptSubmitEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        resolveStaleApproval(session: s, reason: "Overtaken by new event")
         let trimmed = e.prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
             // Use the longest meaningful prompt as the title (prefer detailed instructions over "hi")
@@ -229,6 +245,7 @@ final class SessionManager: ObservableObject {
 
     private func handleStop(_ e: StopEvent) {
         let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        resolveStaleApproval(session: s, reason: "Session stopped")
         s.status      = .completed
         s.currentTool = nil
         s.lastActivity = Date()
@@ -260,6 +277,19 @@ final class SessionManager: ObservableObject {
     }
 
     // MARK: - Approval (called from UI)
+
+    /// 清理残留的 pending approval：bridge 断连后新事件到达时，
+    /// resume 旧的 continuation 防止 Task 永久挂起。
+    private func resolveStaleApproval(session: Session, reason: String) {
+        guard session.pendingApprovalContinuation != nil else { return }
+        debugLog("resolveStaleApproval: session \(session.id.prefix(8)) — \(reason)")
+        session.pendingApprovalContinuation?.resume(
+            returning: HookResponse(decision: .deny, reason: reason, updatedPermissions: nil, answers: nil)
+        )
+        session.pendingApprovalContinuation = nil
+        session.status = .running(toolName: session.currentTool ?? "thinking")
+        advanceActiveApproval(resolved: session.id)
+    }
 
     func approve(session: Session, updatedPermissions: [JSONValue]? = nil, answers: [String: String]? = nil) {
         NSLog("[ClawIsland] approve called — continuation present: %d, updatedPermissions: %d", session.pendingApprovalContinuation != nil ? 1 : 0, updatedPermissions != nil ? 1 : 0)
