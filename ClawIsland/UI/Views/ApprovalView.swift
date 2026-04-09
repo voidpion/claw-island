@@ -266,6 +266,16 @@ private struct AskUserQuestionView: View {
                 }
             }
 
+            // 提示：点击上方卡片标题区可聚焦对应终端
+            HStack(spacing: 4) {
+                Image(systemName: "terminal")
+                    .font(.system(size: 9))
+                Text("点击会话可跳转至终端处理")
+                    .font(.system(size: 9.5))
+            }
+            .foregroundStyle(.white.opacity(0.25))
+            .frame(maxWidth: .infinity, alignment: .trailing)
+
             // 提交按钮
             ApprovalButton(
                 label: "提交",
