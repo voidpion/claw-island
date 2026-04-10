@@ -155,9 +155,9 @@ struct NotchContentView: View {
             viewModel.onOpenSettings?()
         } label: {
             Image(systemName: "gearshape.fill")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.white.opacity(gearHovered ? 0.6 : 0.25))
-                .frame(width: 28, height: 28)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(gearHovered ? 0.85 : 0.45))
+                .frame(width: 32, height: 32)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
