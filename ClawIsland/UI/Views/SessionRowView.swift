@@ -73,7 +73,7 @@ struct SessionRowView: View {
 
             Spacer(minLength: 4)
 
-            // Right badges: queued approval indicator + model + time
+            // Right badges: queued approval + CLI name + model + time
             VStack(alignment: .trailing, spacing: 4) {
                 // 排队等待角标：waiting 但不是当前 active
                 if isQueuedApproval {
@@ -90,6 +90,17 @@ struct SessionRowView: View {
                     .clipShape(Capsule())
                     .overlay(Capsule().strokeBorder(Color.orange.opacity(0.3), lineWidth: 0.5))
                 }
+                // Line 1: CLI short name
+                Text(session.agent == .codex ? "Codex" : "Claude")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(session.agent == .codex
+                        ? Color(red: 0.2, green: 0.9, blue: 0.6)
+                        : Color(red: 0.55, green: 0.75, blue: 1.0))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.white.opacity(0.08))
+                    .clipShape(Capsule())
+                // Line 2: model name
                 if let model = session.model {
                     Text(model)
                         .font(.system(size: 9.5, weight: .medium))
@@ -99,6 +110,7 @@ struct SessionRowView: View {
                         .background(Color.white.opacity(0.08))
                         .clipShape(Capsule())
                 }
+                // Line 3: elapsed time
                 Text(session.elapsedTime)
                     .font(.system(size: 9.5, weight: .medium, design: .monospaced))
                     .foregroundStyle(.white.opacity(0.28))
