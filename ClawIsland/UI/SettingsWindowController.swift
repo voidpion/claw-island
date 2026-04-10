@@ -5,7 +5,7 @@ import SwiftUI
 final class SettingsWindowController: NSWindowController {
     init() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 380, height: 240),
+            contentRect: NSRect(x: 0, y: 0, width: 380, height: 280),
             styleMask: [.titled, .closable, .nonactivatingPanel],
             backing: .buffered,
             defer: false
@@ -17,6 +17,7 @@ final class SettingsWindowController: NSWindowController {
         panel.isReleasedWhenClosed = false
         panel.backgroundColor = .windowBackgroundColor
         super.init(window: panel)
+        panel.delegate = self
 
         let rootView = SettingsContentView()
             .environmentObject(AppSettings.shared)
@@ -53,4 +54,16 @@ final class SettingsWindowController: NSWindowController {
         let wy = screen.frame.midY - window.frame.height / 2
         window.setFrameOrigin(NSPoint(x: wx, y: wy))
     }
+}
+
+// MARK: - NSWindowDelegate
+
+extension SettingsWindowController: NSWindowDelegate {
+    func windowDidBecomeKey(_ notification: Notification) {
+        NotificationCenter.default.post(name: .settingsWindowDidShow, object: nil)
+    }
+}
+
+extension Notification.Name {
+    static let settingsWindowDidShow = Notification.Name("settingsWindowDidShow")
 }
