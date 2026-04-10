@@ -45,6 +45,21 @@ struct HookInstaller {
         FileManager.default.isExecutableFile(atPath: bridgeInstallPath)
     }
 
+    /// Check whether all required hooks are registered in ~/.claude/settings.json.
+    static func validateHooks() -> Bool {
+        let settingsURL = claudeSettingsURL()
+        let settings = readSettings(at: settingsURL)
+        let hooks = settings["hooks"] as? [String: Any] ?? [:]
+
+        for (event, _) in hookEvents {
+            guard let entries = hooks[event] as? [[String: Any]],
+                  entries.contains(where: isClaIslandEntry) else {
+                return false
+            }
+        }
+        return true
+    }
+
     // MARK: - Binary installation
 
     private static func installBinary(from sourcePath: String) throws {

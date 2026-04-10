@@ -154,7 +154,8 @@ struct NotchContentView: View {
             Image(systemName: "gearshape.fill")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.white.opacity(gearHovered ? 0.6 : 0.25))
-                .frame(width: 22, height: 22)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onHover { hovered in
