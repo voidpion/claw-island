@@ -1,9 +1,17 @@
 import Foundation
 
-// MARK: - Incoming events from Claude Code hooks
-// Claude Code passes all events via stdin as JSON.
+// MARK: - Agent type
+
+enum AgentType: String, Codable, Sendable {
+    case claude
+    case codex
+}
+
+// MARK: - Incoming events from Claude Code / Codex CLI hooks
+// Both agents pass events via stdin as JSON.
 // The JSON always contains `hook_event_name` (the event type discriminator)
 // plus `session_id` and `transcript_path` in the base payload.
+// The bridge injects `agent` to identify the source.
 
 enum HookEvent: Codable, Sendable {
     case permissionRequest(PermissionRequestEvent)
@@ -122,6 +130,28 @@ enum HookEvent: Codable, Sendable {
         case .unknown: nil
         }
     }
+
+    /// Agent type injected by the bridge binary ("claude" or "codex").
+    /// Defaults to .claude for backward compatibility.
+    var agent: AgentType {
+        switch self {
+        case .permissionRequest(let e): e.agent
+        case .preToolUse(let e): e.agent
+        case .postToolUse(let e): e.agent
+        case .notification(let e): e.agent
+        case .sessionStart(let e): e.agent
+        case .sessionEnd(let e): e.agent
+        case .stop(let e): e.agent
+        case .subagentStart(let e): e.agent
+        case .subagentStop(let e): e.agent
+        case .userPromptSubmit(let e): e.agent
+        case .preCompact(let e): e.agent
+        case .postCompact(let e): e.agent
+        case .postToolUseFailure(let e): e.agent
+        case .stopFailure(let e): e.agent
+        case .unknown: .claude
+        }
+    }
 }
 
 // MARK: - Base fields shared by all events
@@ -143,6 +173,7 @@ struct PermissionRequestEvent: Codable, Sendable {
     let toolName: String
     let toolInput: JSONValue
     let permissionSuggestions: [JSONValue]?
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -150,6 +181,17 @@ struct PermissionRequestEvent: Codable, Sendable {
         case toolName = "tool_name"
         case toolInput = "tool_input"
         case permissionSuggestions = "permission_suggestions"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        toolName = try c.decode(String.self, forKey: .toolName)
+        toolInput = try c.decode(JSONValue.self, forKey: .toolInput)
+        permissionSuggestions = try c.decodeIfPresent([JSONValue].self, forKey: .permissionSuggestions)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -160,12 +202,23 @@ struct PreToolUseEvent: Codable, Sendable {
     let transcriptPath: String?
     let toolName: String
     let toolInput: JSONValue
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case toolName = "tool_name"
         case toolInput = "tool_input"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        toolName = try c.decode(String.self, forKey: .toolName)
+        toolInput = try c.decode(JSONValue.self, forKey: .toolInput)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -177,6 +230,7 @@ struct PostToolUseEvent: Codable, Sendable {
     let toolName: String
     let toolInput: JSONValue
     let toolResponse: JSONValue?
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -184,6 +238,17 @@ struct PostToolUseEvent: Codable, Sendable {
         case toolName = "tool_name"
         case toolInput = "tool_input"
         case toolResponse = "tool_response"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        toolName = try c.decode(String.self, forKey: .toolName)
+        toolInput = try c.decode(JSONValue.self, forKey: .toolInput)
+        toolResponse = try c.decodeIfPresent(JSONValue.self, forKey: .toolResponse)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -195,6 +260,7 @@ struct NotificationEvent: Codable, Sendable {
     let message: String
     let title: String?
     let notificationType: String?
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -202,6 +268,17 @@ struct NotificationEvent: Codable, Sendable {
         case message
         case title
         case notificationType = "notification_type"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        message = try c.decode(String.self, forKey: .message)
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        notificationType = try c.decodeIfPresent(String.self, forKey: .notificationType)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -213,7 +290,8 @@ struct SessionStartEvent: Codable, Sendable {
     let source: String?   // "startup" | "resume" | "clear" | "compact"
     let model: String?
     let cwd: String?
-    let tty: String?      // injected by ClawBridge: e.g. "/dev/ttys003"
+    let tty: String?      // injected by bridge: e.g. "/dev/ttys003"
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -222,6 +300,18 @@ struct SessionStartEvent: Codable, Sendable {
         case model
         case cwd
         case tty
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        source = try c.decodeIfPresent(String.self, forKey: .source)
+        model = try c.decodeIfPresent(String.self, forKey: .model)
+        cwd = try c.decodeIfPresent(String.self, forKey: .cwd)
+        tty = try c.decodeIfPresent(String.self, forKey: .tty)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -230,10 +320,19 @@ struct SessionStartEvent: Codable, Sendable {
 struct SessionEndEvent: Codable, Sendable {
     let sessionId: String
     let transcriptPath: String?
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -242,10 +341,19 @@ struct SessionEndEvent: Codable, Sendable {
 struct StopEvent: Codable, Sendable {
     let sessionId: String
     let transcriptPath: String?
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -256,12 +364,23 @@ struct SubagentStartEvent: Codable, Sendable {
     let transcriptPath: String?
     let agentId: String
     let agentType: String
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case agentId = "agent_id"
         case agentType = "agent_type"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        agentId = try c.decode(String.self, forKey: .agentId)
+        agentType = try c.decode(String.self, forKey: .agentType)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -271,11 +390,21 @@ struct SubagentStopEvent: Codable, Sendable {
     let sessionId: String
     let transcriptPath: String?
     let agentId: String
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case agentId = "agent_id"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        agentId = try c.decode(String.self, forKey: .agentId)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -285,11 +414,21 @@ struct UserPromptSubmitEvent: Codable, Sendable {
     let sessionId: String
     let transcriptPath: String?
     let prompt: String
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case prompt
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        prompt = try c.decode(String.self, forKey: .prompt)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -300,12 +439,23 @@ struct PreCompactEvent: Codable, Sendable {
     let transcriptPath: String?
     let trigger: String          // "manual" | "auto"
     let customInstructions: String?
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case trigger
         case customInstructions = "custom_instructions"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        trigger = try c.decode(String.self, forKey: .trigger)
+        customInstructions = try c.decodeIfPresent(String.self, forKey: .customInstructions)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -316,12 +466,23 @@ struct PostCompactEvent: Codable, Sendable {
     let transcriptPath: String?
     let trigger: String
     let compactSummary: String?
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case trigger
         case compactSummary = "compact_summary"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        trigger = try c.decode(String.self, forKey: .trigger)
+        compactSummary = try c.decodeIfPresent(String.self, forKey: .compactSummary)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -334,6 +495,7 @@ struct PostToolUseFailureEvent: Codable, Sendable {
     let toolInput: JSONValue
     let error: String
     let isInterrupt: Bool?
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -342,6 +504,18 @@ struct PostToolUseFailureEvent: Codable, Sendable {
         case toolInput = "tool_input"
         case error
         case isInterrupt = "is_interrupt"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        toolName = try c.decode(String.self, forKey: .toolName)
+        toolInput = try c.decode(JSONValue.self, forKey: .toolInput)
+        error = try c.decode(String.self, forKey: .error)
+        isInterrupt = try c.decodeIfPresent(Bool.self, forKey: .isInterrupt)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
@@ -350,16 +524,25 @@ struct PostToolUseFailureEvent: Codable, Sendable {
 struct StopFailureEvent: Codable, Sendable {
     let sessionId: String
     let transcriptPath: String?
-    /// "rate_limit" | "authentication_failed" | "billing_error" |
-    /// "invalid_request" | "server_error" | "max_output_tokens" | "unknown"
     let error: String
     let errorDetails: String?
+    let agent: AgentType
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
         case transcriptPath = "transcript_path"
         case error
         case errorDetails = "error_details"
+        case agent
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sessionId = try c.decode(String.self, forKey: .sessionId)
+        transcriptPath = try c.decodeIfPresent(String.self, forKey: .transcriptPath)
+        error = try c.decode(String.self, forKey: .error)
+        errorDetails = try c.decodeIfPresent(String.self, forKey: .errorDetails)
+        agent = (try? c.decodeIfPresent(AgentType.self, forKey: .agent)) ?? .claude
     }
 }
 
