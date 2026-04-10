@@ -9,6 +9,18 @@ DIST_DIR="dist"
 DMG_NAME="ClawIsland"
 APP_NAME="ClawIsland.app"
 VOLUME_NAME="$DMG_NAME"
+PROJECT_YML="project.yml"
+
+# Bump version: +0.1 by default, or use explicit version from first arg
+CURRENT=$(grep 'CFBundleShortVersionString' "$PROJECT_YML" | sed 's/.*: *"\([^"]*\)".*/\1/')
+if [ -n "${1:-}" ]; then
+    NEW_VERSION="$1"
+else
+    NEW_VERSION=$(printf "%.1f" "$(echo "$CURRENT + 0.1" | bc)")
+fi
+echo "==> Version: $CURRENT → $NEW_VERSION"
+sed -i '' "s/CFBundleShortVersionString: \"[^\"]*\"/CFBundleShortVersionString: \"$NEW_VERSION\"/" "$PROJECT_YML"
+xcodegen generate 2>&1 | tail -1
 
 echo "==> Cleaning..."
 # Detach any leftover mounts
@@ -117,7 +129,7 @@ To grant or verify the permission:
 3. If you don't see the prompt, try relaunching the app.
 README
 
-FINAL_DMG="$DIST_DIR/${DMG_NAME}.dmg"
+FINAL_DMG="$DIST_DIR/${DMG_NAME}-${NEW_VERSION}.dmg"
 
 echo "==> Creating DMG..."
 hdiutil create \
@@ -128,4 +140,5 @@ hdiutil create \
 
 echo ""
 echo "==> Done: $FINAL_DMG"
+echo "    Version: $NEW_VERSION"
 echo "    Size: $(du -h "$FINAL_DMG" | cut -f1)"

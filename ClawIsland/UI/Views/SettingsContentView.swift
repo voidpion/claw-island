@@ -8,13 +8,87 @@ struct SettingsContentView: View {
     var body: some View {
         VStack(spacing: 16) {
             displaySection
-            aboutSection
+            configSection
+            versionSection
             Spacer(minLength: 0)
-            bottomBar
+            quitButton
         }
         .padding(16)
         .onAppear { refreshConfigStatus() }
         .onReceive(NotificationCenter.default.publisher(for: .settingsWindowDidShow)) { _ in refreshConfigStatus() }
+    }
+
+    // MARK: - Config section
+
+    private var configSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Config")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+            settingsGroup {
+                configRow(label: "Claude Code", isOK: claudeConfigOK) {
+                    fixClaudeConfig()
+                }
+                configRow(label: "Codex", isOK: codexConfigOK) {
+                    fixCodexConfig()
+                }
+            }
+        }
+    }
+
+    private func configRow(label: String, isOK: Bool, action: @escaping () -> Void) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: isOK ? "checkmark.circle.fill" : "xmark.circle.fill")
+                .font(.system(size: 13))
+                .foregroundStyle(isOK ? Color.green.opacity(0.8) : Color.red.opacity(0.7))
+                .frame(width: 20)
+
+            Text(label)
+                .font(.system(size: 13))
+                .foregroundStyle(.primary)
+
+            Spacer(minLength: 0)
+
+            Button {
+                action()
+            } label: {
+                Text(isOK ? "Ready" : "Fix")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(isOK ? Color.green.opacity(0.7) : Color.red.opacity(0.75))
+                    )
+            }
+            .buttonStyle(.plain)
+            .disabled(isOK)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+    }
+
+    private func fixClaudeConfig() {
+        if let bridgeSource = Bundle.main.path(forResource: "ClawBridge", ofType: nil),
+           FileManager.default.isExecutableFile(atPath: bridgeSource) {
+            try? HookInstaller.install(bridgeSourcePath: bridgeSource)
+        }
+        refreshConfigStatus()
+    }
+
+    private func fixCodexConfig() {
+        if let codexSource = Bundle.main.path(forResource: "CodexBridge", ofType: nil),
+           FileManager.default.isExecutableFile(atPath: codexSource) {
+            try? HookInstaller.installCodex(bridgeSourcePath: codexSource)
+        }
+        refreshConfigStatus()
+    }
+
+    private func refreshConfigStatus() {
+        claudeConfigOK = HookInstaller.validateHooks()
+        codexConfigOK = HookInstaller.validateCodexHooks()
     }
 
     // MARK: - Display section
@@ -27,64 +101,14 @@ struct SettingsContentView: View {
         }
     }
 
-    // MARK: - About section
+    // MARK: - Version section
 
-    private var aboutSection: some View {
+    private var versionSection: some View {
         settingsGroup {
             settingsRow(icon: "info.circle", label: "Version") {
                 aboutVersion
             }
         }
-    }
-
-    // MARK: - Bottom bar
-
-    private var bottomBar: some View {
-        HStack(spacing: 10) {
-            configButton
-            quitButton
-        }
-    }
-
-    // MARK: - Config button
-
-    private var allConfigOK: Bool { claudeConfigOK && codexConfigOK }
-
-    private var configButton: some View {
-        Button {
-            fixConfig()
-        } label: {
-            Text(allConfigOK ? "Config Ready" : "Fix Config")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(allConfigOK ? Color.green.opacity(0.75) : Color.red.opacity(0.8))
-                )
-        }
-        .buttonStyle(.plain)
-        .disabled(allConfigOK)
-    }
-
-    private func fixConfig() {
-        // Fix Claude config
-        if let bridgeSource = Bundle.main.path(forResource: "ClawBridge", ofType: nil),
-           FileManager.default.isExecutableFile(atPath: bridgeSource) {
-            try? HookInstaller.install(bridgeSourcePath: bridgeSource)
-        }
-        // Fix Codex config
-        if let codexSource = Bundle.main.path(forResource: "CodexBridge", ofType: nil),
-           FileManager.default.isExecutableFile(atPath: codexSource) {
-            try? HookInstaller.installCodex(bridgeSourcePath: codexSource)
-        }
-        refreshConfigStatus()
-    }
-
-    private func refreshConfigStatus() {
-        claudeConfigOK = HookInstaller.validateHooks()
-        codexConfigOK = HookInstaller.validateCodexHooks()
     }
 
     // MARK: - Quit button
