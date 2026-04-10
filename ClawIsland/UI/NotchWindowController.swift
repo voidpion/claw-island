@@ -263,7 +263,7 @@ final class NotchWindowController: NSWindowController {
         let x = sf.minX + (sf.width - w) / 2
         let y = sf.maxY - h - bleed
         let newFrame = CGRect(x: x, y: y, width: w, height: h + bleed)
-        targetFrame = CGRect(x: x, y: sf.maxY - h, width: w, height: h) // hover uses visible frame
+        targetFrame = CGRect(x: x, y: sf.maxY - h, width: w, height: h + bleed) // hover includes topBleed
 
         if animated {
             NSAnimationContext.runAnimationGroup { ctx in

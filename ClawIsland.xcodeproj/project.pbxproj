@@ -16,11 +16,13 @@
 		92945122E98097B2B1A86351 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DFBE54FF1B1636C050200165 /* Assets.xcassets */; };
 		9A05E413F7770634D2A70221 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8682FC31FC648EF837240A54 /* AppSettings.swift */; };
 		9CE78737233CA569F7F63D73 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE47FFB343A580FBEFC2C7B0 /* AppDelegate.swift */; };
+		A749B8723C44321F71B901A8 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07C5E7970BFF42401A3F89EB /* main.swift */; };
 		AC539128565B734EB2DFCE35 /* ClawBridge in Resources */ = {isa = PBXBuildFile; fileRef = B6DC4ECB30C6ABED113600E4 /* ClawBridge */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BDA3351E763B0BC4C7C12E24 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A8E0D57B57BA11EB8065CD1 /* main.swift */; };
 		BDF30DFABBD57B28C94BD67D /* HookInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 596420CF0DB64168E7E7AA05 /* HookInstaller.swift */; };
 		BE1FDD0178A03059E1FA3D44 /* NotchContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0548E445B8068EB0F91C0E55 /* NotchContentView.swift */; };
 		C1B647E0F2510DFA01C5A495 /* BuddyArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A9847D9063B09306A46AB5B /* BuddyArt.swift */; };
+		C4403F162E72817E50D8FC8A /* CodexBridge in Resources */ = {isa = PBXBuildFile; fileRef = A888B8A3EE064F3E441BB78B /* CodexBridge */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C7B2BC78320750AE0F4FF3CB /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E737419728991C3F18BE38 /* Session.swift */; };
 		D2015570780D1105927AA5A5 /* SessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308561B660F3FA742C46EC03 /* SessionManager.swift */; };
 		F0A2912E231992810D5D12A0 /* HookEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA3A1884265334D9436B3D3D /* HookEvent.swift */; };
@@ -30,6 +32,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		590D44A9A3B86E8260C50AD1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3F0FFB9CF94FBD0B3B501D2D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 13C2C183D6FF8C5991DFB868;
+			remoteInfo = CodexBridge;
+		};
 		938333CB6CC67B7C888C24F1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 3F0FFB9CF94FBD0B3B501D2D /* Project object */;
@@ -42,6 +51,7 @@
 /* Begin PBXFileReference section */
 		03C4EFADB8479979FDBAA349 /* SettingsWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowController.swift; sourceTree = "<group>"; };
 		0548E445B8068EB0F91C0E55 /* NotchContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchContentView.swift; sourceTree = "<group>"; };
+		07C5E7970BFF42401A3F89EB /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		0ADE82F193B993E5FE906CD7 /* ClawIslandApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClawIslandApp.swift; sourceTree = "<group>"; };
 		1A9847D9063B09306A46AB5B /* BuddyArt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuddyArt.swift; sourceTree = "<group>"; };
 		1C85C0FD9BCD5F043FAB1B0E /* SoundManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundManager.swift; sourceTree = "<group>"; };
@@ -55,6 +65,7 @@
 		7A8E0D57B57BA11EB8065CD1 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		7C13AAD262B3CDDD07B05501 /* NotchWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchWindowController.swift; sourceTree = "<group>"; };
 		8682FC31FC648EF837240A54 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		A888B8A3EE064F3E441BB78B /* CodexBridge */ = {isa = PBXFileReference; includeInIndex = 0; path = CodexBridge; sourceTree = BUILT_PRODUCTS_DIR; };
 		B6DC4ECB30C6ABED113600E4 /* ClawBridge */ = {isa = PBXFileReference; includeInIndex = 0; path = ClawBridge; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA3A1884265334D9436B3D3D /* HookEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookEvent.swift; sourceTree = "<group>"; };
 		BA55D9D6C83B586FE6F46EC5 /* SocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketServer.swift; sourceTree = "<group>"; };
@@ -120,6 +131,14 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		625677CE48DCBAF46D6C34F2 /* CodexBridge */ = {
+			isa = PBXGroup;
+			children = (
+				07C5E7970BFF42401A3F89EB /* main.swift */,
+			);
+			path = CodexBridge;
+			sourceTree = "<group>";
+		};
 		9075352EE57A1B4A58455B19 /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -134,6 +153,7 @@
 			children = (
 				B6DC4ECB30C6ABED113600E4 /* ClawBridge */,
 				EE269547517F43B4B14BA9EB /* ClawIsland.app */,
+				A888B8A3EE064F3E441BB78B /* CodexBridge */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -163,6 +183,7 @@
 			children = (
 				E7DCAA93AB4EB300AF80EC9B /* ClawBridge */,
 				3F9A2537EF38DBB0576C54C3 /* ClawIsland */,
+				625677CE48DCBAF46D6C34F2 /* CodexBridge */,
 				A24AC91CA0C5EF64B5A08D34 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -170,6 +191,23 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		13C2C183D6FF8C5991DFB868 /* CodexBridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 724D4C68E9BBAA8429C2EA33 /* Build configuration list for PBXNativeTarget "CodexBridge" */;
+			buildPhases = (
+				53F5B3987495194B51FEFBB9 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CodexBridge;
+			packageProductDependencies = (
+			);
+			productName = CodexBridge;
+			productReference = A888B8A3EE064F3E441BB78B /* CodexBridge */;
+			productType = "com.apple.product-type.tool";
+		};
 		52EA96575D9CBCD93CBF63D0 /* ClawBridge */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 1A197EB054CD3D0C3C8980C7 /* Build configuration list for PBXNativeTarget "ClawBridge" */;
@@ -198,6 +236,7 @@
 			);
 			dependencies = (
 				B87115A90C66DCD89BD2CF94 /* PBXTargetDependency */,
+				3FBBC964C71B85C766682819 /* PBXTargetDependency */,
 			);
 			name = ClawIsland;
 			packageProductDependencies = (
@@ -215,6 +254,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					13C2C183D6FF8C5991DFB868 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
 					52EA96575D9CBCD93CBF63D0 = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
@@ -241,6 +284,7 @@
 			targets = (
 				52EA96575D9CBCD93CBF63D0 /* ClawBridge */,
 				7163EF368AF2124839EF0E0C /* ClawIsland */,
+				13C2C183D6FF8C5991DFB868 /* CodexBridge */,
 			);
 		};
 /* End PBXProject section */
@@ -252,12 +296,21 @@
 			files = (
 				92945122E98097B2B1A86351 /* Assets.xcassets in Resources */,
 				AC539128565B734EB2DFCE35 /* ClawBridge in Resources */,
+				C4403F162E72817E50D8FC8A /* CodexBridge in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		53F5B3987495194B51FEFBB9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A749B8723C44321F71B901A8 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A4496F73FF540D5200A27482 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -293,6 +346,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		3FBBC964C71B85C766682819 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 13C2C183D6FF8C5991DFB868 /* CodexBridge */;
+			targetProxy = 590D44A9A3B86E8260C50AD1 /* PBXContainerItemProxy */;
+		};
 		B87115A90C66DCD89BD2CF94 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 52EA96575D9CBCD93CBF63D0 /* ClawBridge */;
@@ -367,6 +425,21 @@
 			};
 			name = Debug;
 		};
+		55CDD051AC3FFE1075C31C57 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zhangjin.codex-bridge";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
 		5A836C7DAC64EBF12B1AF86A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -428,6 +501,21 @@
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.zhangjin.claw-island";
 				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		B8ABC711D04C5803E4E05B5A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zhangjin.codex-bridge";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
@@ -498,6 +586,15 @@
 			buildConfigurations = (
 				870B54518FCD36CFD7B4A199 /* Debug */,
 				5DE8B9AD5E4BBC2BF20C5780 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		724D4C68E9BBAA8429C2EA33 /* Build configuration list for PBXNativeTarget "CodexBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				55CDD051AC3FFE1075C31C57 /* Debug */,
+				B8ABC711D04C5803E4E05B5A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -30,28 +30,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Bridge installation
 
     private func installBridgeIfNeeded() {
-        guard let bridgeSource = bridgeBinaryPath() else {
-            print("[ClawIsland] ClawBridge binary not found — hook integration disabled")
-            return
+        // Install Claude bridge
+        if let bridgeSource = bridgeBinaryPath(name: "ClawBridge") {
+            do {
+                try HookInstaller.install(bridgeSourcePath: bridgeSource)
+                print("[ClawIsland] Claude bridge installed at \(HookInstaller.bridgeInstallPath)")
+            } catch {
+                print("[ClawIsland] Failed to install Claude bridge: \(error)")
+            }
+        } else {
+            print("[ClawIsland] ClawBridge binary not found — Claude hook integration disabled")
         }
-        do {
-            try HookInstaller.install(bridgeSourcePath: bridgeSource)
-            print("[ClawIsland] Bridge installed at \(HookInstaller.bridgeInstallPath)")
-        } catch {
-            print("[ClawIsland] Failed to install bridge: \(error)")
+
+        // Install Codex bridge
+        if let codexSource = bridgeBinaryPath(name: "CodexBridge") {
+            do {
+                try HookInstaller.installCodex(bridgeSourcePath: codexSource)
+                print("[ClawIsland] Codex bridge installed at \(HookInstaller.codexBridgeInstallPath)")
+            } catch {
+                print("[ClawIsland] Failed to install Codex bridge: \(error)")
+            }
+        } else {
+            print("[ClawIsland] CodexBridge binary not found — Codex hook integration disabled")
         }
     }
 
-    /// Locate the ClawBridge binary inside the app bundle.
-    /// XcodeGen embeds it at Contents/Resources/ClawBridge.
-    private func bridgeBinaryPath() -> String? {
-        if let path = Bundle.main.path(forResource: "ClawBridge", ofType: nil),
+    /// Locate a bridge binary inside the app bundle.
+    /// XcodeGen embeds them at Contents/Resources/.
+    private func bridgeBinaryPath(name: String) -> String? {
+        if let path = Bundle.main.path(forResource: name, ofType: nil),
            FileManager.default.isExecutableFile(atPath: path) {
             return path
         }
-        // Fallback: MacOS/ sibling (when manually placing the binary)
         if let execDir = Bundle.main.executableURL?.deletingLastPathComponent().path {
-            let candidate = (execDir as NSString).appendingPathComponent("ClawBridge")
+            let candidate = (execDir as NSString).appendingPathComponent(name)
             if FileManager.default.isExecutableFile(atPath: candidate) {
                 return candidate
             }

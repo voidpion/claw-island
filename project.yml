@@ -27,7 +27,7 @@ targets:
         CFBundleName: ClawIsland
         CFBundleDisplayName: Claw Island
         CFBundleIdentifier: com.zhangjin.claw-island
-        CFBundleShortVersionString: "1.0"
+        CFBundleShortVersionString: "1.1"
         CFBundleVersion: "1"
         LSMinimumSystemVersion: "14.0"
         LSUIElement: true
@@ -41,6 +41,11 @@ targets:
         com.apple.security.files.user-selected.read-write: true
     dependencies:
       - target: ClawBridge
+        embed: true
+        link: false
+        codeSign: false
+        destination: Resources
+      - target: CodexBridge
         embed: true
         link: false
         codeSign: false
@@ -61,4 +66,15 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.zhangjin.claw-bridge
+        SWIFT_VERSION: "6.0"
+
+  CodexBridge:
+    type: tool
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - CodexBridge
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.zhangjin.codex-bridge
         SWIFT_VERSION: "6.0"
