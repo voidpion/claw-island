@@ -79,6 +79,7 @@ struct NotchContentView: View {
                       hasSessions: !sessionManager.sessions.isEmpty,
                       expanded: viewModel.expanded)
                 .frame(maxWidth: .infinity)
+                .frame(height: viewModel.collapsedHeight, alignment: .center)
 
             // 硬件 notch 占位
             Color.clear.frame(width: viewModel.notchWidth > 0 ? viewModel.notchWidth : 0)
@@ -96,6 +97,8 @@ struct NotchContentView: View {
                 )
             })
             .frame(maxWidth: .infinity)
+            .frame(minHeight: 0)
+            .frame(height: viewModel.collapsedHeight, alignment: .center)
         }
         .onPreferenceChange(CollapsedWidthKey.self) { sideWidth in
             if !viewModel.expanded {

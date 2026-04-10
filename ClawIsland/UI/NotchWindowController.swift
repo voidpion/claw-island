@@ -133,9 +133,16 @@ final class NotchWindowController: NSWindowController {
 
     private func updateNotchGeometry() {
         let screen = notchScreen ?? NSScreen.main
-        // Height from safeAreaInsets
+        // Height: match notch if present, otherwise match menu bar
         let inset = screen?.safeAreaInsets.top ?? 0
-        viewModel.collapsedHeight = inset > 0 ? inset : Self.collapsedHeight
+        if inset > 0 {
+            viewModel.collapsedHeight = inset
+        } else {
+            // No notch — use menu bar height (visibleFrame gap from screen top)
+            let menuBarH = (screen?.frame.height ?? 0) - (screen?.visibleFrame.maxY ?? 0)
+                           - (screen?.visibleFrame.origin.y ?? 0)
+            viewModel.collapsedHeight = menuBarH > 0 ? menuBarH : 24
+        }
         // Width: screen width minus the two auxiliary strips flanking the notch
         if let screen,
            let left  = screen.auxiliaryTopLeftArea,
