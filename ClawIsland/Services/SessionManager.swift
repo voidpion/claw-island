@@ -53,12 +53,12 @@ final class SessionManager: ObservableObject {
 
     private func handleSessionStart(_ e: SessionStartEvent) {
         debugLog("handleSessionStart id=\(e.sessionId) sessions.count=\(sessions.count)")
-        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath)
+        let s = findOrCreate(id: e.sessionId, transcriptPath: e.transcriptPath, agent: e.agent)
         s.lastActivity = Date()
         if let model = e.model { s.model = model }
         if let cwd = e.cwd { s.cwd = cwd }
         if let tty = e.tty { s.tty = tty }
-        debugLog("handleSessionStart id=\(e.sessionId.prefix(8)) tty=\(e.tty ?? "nil") cwd=\(e.cwd ?? "nil")")
+        debugLog("handleSessionStart id=\(e.sessionId.prefix(8)) tty=\(e.tty ?? "nil") cwd=\(e.cwd ?? "nil") agent=\(e.agent)")
         // compact / resume: session continues — preserve title, start time, and status.
         // startup / clear / unknown: fresh session, fully reset.
         let isContinuation = e.source == "compact" || e.source == "resume"
@@ -74,8 +74,8 @@ final class SessionManager: ObservableObject {
             s.subagentCount = 0
             soundManager?.play(.sessionStart)
         }
-        // Read initial title & model from transcript JSONL
-        if let path = e.transcriptPath {
+        // Read initial title & model from transcript JSONL (Claude only)
+        if e.agent == .claude, let path = e.transcriptPath {
             let info = Self.parseTranscript(path: path)
             if let t = info.title, s.customTitle == nil { s.customTitle = t }
             if let m = info.model, s.model == nil { s.model = m }
@@ -405,9 +405,9 @@ final class SessionManager: ObservableObject {
 
     // MARK: - Helpers
 
-    private func findOrCreate(id: String, transcriptPath: String?) -> Session {
+    private func findOrCreate(id: String, transcriptPath: String?, agent: AgentType = .claude) -> Session {
         if let existing = sessions.first(where: { $0.id == id }) { return existing }
-        let s = Session(id: id, transcriptPath: transcriptPath)
+        let s = Session(id: id, transcriptPath: transcriptPath, agent: agent)
         sessions.append(s)
         debugLog("findOrCreate: created new session, total=\(sessions.count)")
         return s
@@ -653,7 +653,7 @@ final class SessionManager: ObservableObject {
         return nil
     }
 
-    /// Shorten model IDs for display: "claude-sonnet-4-6" → "sonnet-4.6", "glm-5.1" → "glm-5.1"
+    /// Shorten model IDs for display: "claude-sonnet-4-6" → "sonnet-4.6", "o3" → "o3", "glm-5.1" → "glm-5.1"
     private static func shortModelName(_ raw: String) -> String {
         if raw.hasPrefix("claude-") {
             let rest = String(raw.dropFirst(7)) // drop "claude-"
@@ -664,6 +664,7 @@ final class SessionManager: ObservableObject {
                 return "\(family)-\(version)"
             }
         }
+        // Codex/OpenAI models are already short: "o3", "o4-mini", "gpt-4o", etc.
         return raw
     }
 }

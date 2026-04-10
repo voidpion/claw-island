@@ -14,6 +14,7 @@ enum SessionStatus: Sendable {
 final class Session: ObservableObject, Identifiable {
     let id: String
     let transcriptPath: String?
+    let agent: AgentType
 
     @Published var status: SessionStatus = .idle
     @Published var currentTool: String?
@@ -33,9 +34,10 @@ final class Session: ObservableObject, Identifiable {
     /// Timer to refresh elapsedTime display every minute.
     private nonisolated(unsafe) var elapsedTimer: Timer?
 
-    init(id: String, transcriptPath: String?) {
+    init(id: String, transcriptPath: String?, agent: AgentType = .claude) {
         self.id = id
         self.transcriptPath = transcriptPath
+        self.agent = agent
         startElapsedTimer()
     }
 

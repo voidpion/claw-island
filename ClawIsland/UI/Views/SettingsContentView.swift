@@ -2,7 +2,8 @@ import SwiftUI
 
 struct SettingsContentView: View {
     @EnvironmentObject var settings: AppSettings
-    @State private var configOK = false
+    @State private var claudeConfigOK = false
+    @State private var codexConfigOK = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -47,33 +48,43 @@ struct SettingsContentView: View {
 
     // MARK: - Config button
 
+    private var allConfigOK: Bool { claudeConfigOK && codexConfigOK }
+
     private var configButton: some View {
         Button {
             fixConfig()
         } label: {
-            Text(configOK ? "Config Ready" : "Fix Config")
+            Text(allConfigOK ? "Config Ready" : "Fix Config")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
                 .background(
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(configOK ? Color.green.opacity(0.75) : Color.red.opacity(0.8))
+                        .fill(allConfigOK ? Color.green.opacity(0.75) : Color.red.opacity(0.8))
                 )
         }
         .buttonStyle(.plain)
-        .disabled(configOK)
+        .disabled(allConfigOK)
     }
 
     private func fixConfig() {
-        guard let bridgeSource = Bundle.main.path(forResource: "ClawBridge", ofType: nil),
-              FileManager.default.isExecutableFile(atPath: bridgeSource) else { return }
-        try? HookInstaller.install(bridgeSourcePath: bridgeSource)
+        // Fix Claude config
+        if let bridgeSource = Bundle.main.path(forResource: "ClawBridge", ofType: nil),
+           FileManager.default.isExecutableFile(atPath: bridgeSource) {
+            try? HookInstaller.install(bridgeSourcePath: bridgeSource)
+        }
+        // Fix Codex config
+        if let codexSource = Bundle.main.path(forResource: "CodexBridge", ofType: nil),
+           FileManager.default.isExecutableFile(atPath: codexSource) {
+            try? HookInstaller.installCodex(bridgeSourcePath: codexSource)
+        }
         refreshConfigStatus()
     }
 
     private func refreshConfigStatus() {
-        configOK = HookInstaller.validateHooks()
+        claudeConfigOK = HookInstaller.validateHooks()
+        codexConfigOK = HookInstaller.validateCodexHooks()
     }
 
     // MARK: - Quit button
