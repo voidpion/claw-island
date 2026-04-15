@@ -135,14 +135,18 @@ final class NotchWindowController: NSWindowController {
         let screen = notchScreen ?? NSScreen.main
         // Height: match notch if present, otherwise match menu bar
         let inset = screen?.safeAreaInsets.top ?? 0
+        let rawHeight: CGFloat
         if inset > 0 {
-            viewModel.collapsedHeight = inset
+            rawHeight = inset
         } else {
-            // No notch — use menu bar height (visibleFrame gap from screen top)
-            let menuBarH = (screen?.frame.height ?? 0) - (screen?.visibleFrame.maxY ?? 0)
-                           - (screen?.visibleFrame.origin.y ?? 0)
-            viewModel.collapsedHeight = menuBarH > 0 ? menuBarH : 24
+            // No notch — use menu bar height from visibleFrame gap
+            let frameMaxY = screen?.frame.maxY ?? 0
+            let visibleMaxY = screen?.visibleFrame.maxY ?? 0
+            let menuBarH = frameMaxY - visibleMaxY
+            rawHeight = menuBarH > 0 ? menuBarH : 25
         }
+        viewModel.collapsedHeight = rawHeight
+
         // Width: screen width minus the two auxiliary strips flanking the notch
         if let screen,
            let left  = screen.auxiliaryTopLeftArea,
@@ -151,6 +155,8 @@ final class NotchWindowController: NSWindowController {
         } else {
             viewModel.notchWidth = 0
         }
+
+        debugLog("updateNotchGeometry: screen=\(screen?.localizedName ?? "nil"), inset=\(inset), rawHeight=\(rawHeight), notchWidth=\(viewModel.notchWidth)")
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -259,7 +265,9 @@ final class NotchWindowController: NSWindowController {
                   Self.expandedMaxHeight)
             : viewModel.collapsedHeight
 
-        let bleed = Self.topBleed
+        // topBleed only for notch screens (to cover the notch area seamlessly)
+        let hasNotch = viewModel.notchWidth > 0
+        let bleed: CGFloat = hasNotch ? Self.topBleed : 0
         let x = sf.minX + (sf.width - w) / 2
         let y = sf.maxY - h - bleed
         let newFrame = CGRect(x: x, y: y, width: w, height: h + bleed)

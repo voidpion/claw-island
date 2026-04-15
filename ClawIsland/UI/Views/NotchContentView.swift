@@ -25,7 +25,7 @@ struct NotchContentView: View {
             VStack(spacing: 0) {
                 compactBar
                     .frame(maxWidth: .infinity)
-                    .frame(height: viewModel.collapsedHeight + 6, alignment: .center)
+                    .frame(height: viewModel.collapsedHeight + (viewModel.notchWidth > 0 ? 6 : 0), alignment: .center)
 
                 if viewModel.expanded {
                     // 渐隐分隔线：两端透明，中间白色细线
