@@ -49,11 +49,22 @@ struct HookInstaller {
         try registerClaudeHooks()
     }
 
-    /// Copy Codex bridge binary and register hooks in ~/.codex/hooks.json.
-    /// Also enables the codex_hooks feature flag in ~/.codex/config.toml.
+    /// Copy Codex bridge binary and register hooks. Picks `hooks.json` or
+    /// `config.toml` based on what the user already uses, and cleans up the
+    /// other file so Codex doesn't warn about duplicate hook sources.
     static func installCodex(bridgeSourcePath sourcePath: String) throws {
         try installBinary(from: sourcePath, to: codexBridgeInstallPath)
-        try registerCodexHooks()
+
+        switch codexHookTarget() {
+        case .configToml:
+            try writeCodexHooksToConfigToml()
+            try? deregisterCodexHooks()
+            cleanupCodexHooksJsonIfEmpty()
+        case .hooksJson:
+            try registerCodexHooks()
+            try? removeManagedBlockFromConfigToml()
+        }
+
         try enableCodexHooksFeature()
     }
 
@@ -62,7 +73,9 @@ struct HookInstaller {
     }
 
     static func uninstallCodex() throws {
-        try deregisterCodexHooks()
+        try? deregisterCodexHooks()
+        cleanupCodexHooksJsonIfEmpty()
+        try? removeManagedBlockFromConfigToml()
     }
 
     static var isInstalled: Bool {
@@ -88,22 +101,25 @@ struct HookInstaller {
         return true
     }
 
-    /// Check whether all required Codex hooks are registered and feature flag is enabled.
+    /// Check whether Codex hooks are registered (in either hooks.json or
+    /// config.toml) and the feature flag is enabled.
     static func validateCodexHooks() -> Bool {
+        let registered = codexHooksJsonHasAllEntries() || configTomlHasManagedBlock()
+        return registered && isCodexHooksEnabled()
+    }
+
+    private static func codexHooksJsonHasAllEntries() -> Bool {
         let hooksURL = codexHooksURL()
         guard FileManager.default.fileExists(atPath: hooksURL.path) else { return false }
         let hooks = readJSON(at: hooksURL)
         let hookEntries = hooks["hooks"] as? [String: Any] ?? [:]
-
         for event in codexHookEvents {
             guard let entries = hookEntries[event] as? [[String: Any]],
                   entries.contains(where: isCodexIslandEntry) else {
                 return false
             }
         }
-
-        // Also check feature flag
-        return isCodexHooksEnabled()
+        return true
     }
 
     // MARK: - Binary installation
@@ -188,7 +204,7 @@ struct HookInstaller {
             var entries = hookEntries[event] as? [[String: Any]] ?? []
             entries.removeAll { isCodexIslandEntry($0) }
 
-            var hookEntry: [String: Any] = [
+            let hookEntry: [String: Any] = [
                 "type": "command",
                 "command": codexBridgeInstallPath,
             ]
@@ -218,6 +234,107 @@ struct HookInstaller {
         }
         hooks["hooks"] = hookEntries
         try writeJSON(hooks, to: hooksURL)
+    }
+
+    // MARK: - Codex hook target selection & config.toml managed block
+
+    private enum CodexHookTarget { case hooksJson, configToml }
+
+    private static let codexConfigSentinelStart = "# >>> claw-island codex hooks (managed) >>>"
+    private static let codexConfigSentinelEnd = "# <<< claw-island codex hooks (managed) <<<"
+
+    /// Decide where Codex hooks should live. If the user (or new-version Codex)
+    /// already declares `[hooks]` / `[[hooks.X]]` in config.toml outside our
+    /// managed block, we follow them there. Otherwise default to hooks.json.
+    private static func codexHookTarget() -> CodexHookTarget {
+        configTomlHasNonManagedHooks() ? .configToml : .hooksJson
+    }
+
+    private static func configTomlHasNonManagedHooks() -> Bool {
+        guard let content = try? String(contentsOf: codexConfigURL(), encoding: .utf8) else {
+            return false
+        }
+        let stripped = removeManagedBlock(content)
+        let pattern = #"(?m)^[ \t]*(\[hooks\]|\[\[hooks\.)"#
+        return stripped.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    private static func configTomlHasManagedBlock() -> Bool {
+        guard let content = try? String(contentsOf: codexConfigURL(), encoding: .utf8) else {
+            return false
+        }
+        return content.contains(codexConfigSentinelStart) && content.contains(codexConfigSentinelEnd)
+    }
+
+    private static func renderCodexHooksTomlBlock() -> String {
+        var lines: [String] = [codexConfigSentinelStart]
+        for event in codexHookEvents {
+            lines.append("[[hooks.\(event)]]")
+            lines.append("command = \"\(codexBridgeInstallPath)\"")
+            lines.append("")
+        }
+        lines.append(codexConfigSentinelEnd)
+        return lines.joined(separator: "\n")
+    }
+
+    private static func writeCodexHooksToConfigToml() throws {
+        let url = codexConfigURL()
+        var content = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+        content = removeManagedBlock(content)
+        if !content.isEmpty && !content.hasSuffix("\n") { content += "\n" }
+        if !content.isEmpty { content += "\n" }
+        content += renderCodexHooksTomlBlock() + "\n"
+
+        let dir = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try content.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    private static func removeManagedBlockFromConfigToml() throws {
+        let url = codexConfigURL()
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else { return }
+        let cleaned = removeManagedBlock(content)
+        if cleaned != content {
+            try cleaned.write(to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
+    private static func removeManagedBlock(_ content: String) -> String {
+        guard let startRange = content.range(of: codexConfigSentinelStart),
+              let endRange = content.range(
+                of: codexConfigSentinelEnd,
+                range: startRange.upperBound..<content.endIndex
+              )
+        else { return content }
+
+        var lower = startRange.lowerBound
+        while lower > content.startIndex {
+            let prev = content.index(before: lower)
+            if content[prev] == "\n" { lower = prev } else { break }
+        }
+        var upper = endRange.upperBound
+        if upper < content.endIndex, content[upper] == "\n" {
+            upper = content.index(after: upper)
+        }
+        return String(content[content.startIndex..<lower]) + String(content[upper..<content.endIndex])
+    }
+
+    /// If hooks.json exists but no longer contains any meaningful entries,
+    /// delete it so Codex doesn't load an empty file alongside config.toml.
+    private static func cleanupCodexHooksJsonIfEmpty() {
+        let url = codexHooksURL()
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path) else { return }
+        let json = readJSON(at: url)
+        let hookEntries = json["hooks"] as? [String: Any] ?? [:]
+        let hasAnyEntries = hookEntries.values.contains { value in
+            if let arr = value as? [[String: Any]] { return !arr.isEmpty }
+            return false
+        }
+        let otherKeys = json.keys.filter { $0 != "hooks" }
+        if !hasAnyEntries && otherKeys.isEmpty {
+            try? fm.removeItem(at: url)
+        }
     }
 
     /// Enable codex_hooks feature flag in ~/.codex/config.toml.
