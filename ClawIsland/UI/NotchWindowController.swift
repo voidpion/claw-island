@@ -63,9 +63,11 @@ final class NotchWindowController: NSWindowController {
                 self.window?.makeKeyAndOrderFront(nil)
             }
             guard !viewModel.expanded else { return }
-            withAnimation(.spring(response: 0.44, dampingFraction: 0.60)) {
-                viewModel.expanded = true
-            }
+            // 不用 withAnimation：makeKeyAndOrderFront 会触发 AppKit display cycle，
+            // withAnimation 同时排队 SwiftUI 动画事务会导致 updateAnimatedWindowSize
+            // 在 layout pass 中重入修改窗口 frame，触发 NSException 崩溃。
+            // 窗口展开动画由 positionOnNotch 的 NSAnimationContext 负责。
+            viewModel.expanded = true
         }
 
         sessionManager.onAutoCollapse = { [weak self] in
